@@ -264,62 +264,25 @@ const INITIAL_DATA = {
   ],
   weeklyPlan: {
     lunes: [
-      { productId: 'p_01', qty: 25 },
-      { productId: 'p_03', qty: 15 },
-      { productId: 'p_09', qty: 20 },
-      { productId: 'p_15', qty: 18 },
-      { productId: 'p_20', qty: 12 },
-      { productId: 'p_33', qty: 10 }
+      
     ],
     martes: [
-      { productId: 'p_05', qty: 20 },
-      { productId: 'p_06', qty: 25 },
-      { productId: 'p_10', qty: 15 },
-      { productId: 'p_12', qty: 15 },
-      { productId: 'p_24', qty: 10 },
-      { productId: 'p_31', qty: 12 }
+     
     ],
     miercoles: [
-      { productId: 'p_01', qty: 30 },
-      { productId: 'p_07', qty: 15 },
-      { productId: 'p_11', qty: 18 },
-      { productId: 'p_17', qty: 20 },
-      { productId: 'p_22', qty: 12 },
-      { productId: 'p_19', qty: 10 }
+      
     ],
     jueves: [
-      { productId: 'p_06', qty: 35 },
-      { productId: 'p_08', qty: 20 },
-      { productId: 'p_15', qty: 25 },
-      { productId: 'p_18', qty: 15 },
-      { productId: 'p_26', qty: 15 },
-      { productId: 'p_34', qty: 12 }
+     
     ],
     viernes: [
-      { productId: 'p_01', qty: 45 },
-      { productId: 'p_09', qty: 30 },
-      { productId: 'p_10', qty: 25 },
-      { productId: 'p_15', qty: 35 },
-      { productId: 'p_03', qty: 25 },
-      { productId: 'p_21', qty: 15 },
-      { productId: 'p_39', qty: 20 }
+      
     ],
     sabado: [
-      { productId: 'p_01', qty: 50 },
-      { productId: 'p_06', qty: 40 },
-      { productId: 'p_09', qty: 35 },
-      { productId: 'p_15', qty: 40 },
-      { productId: 'p_11', qty: 25 },
-      { productId: 'p_23', qty: 18 },
-      { productId: 'p_40', qty: 25 }
+      
     ],
     domingo: [
-      { productId: 'p_01', qty: 35 },
-      { productId: 'p_05', qty: 20 },
-      { productId: 'p_15', qty: 25 },
-      { productId: 'p_20', qty: 15 },
-      { productId: 'p_31', qty: 15 },
-      { productId: 'p_19', qty: 12 }
+     
     ]
   }
 };
