@@ -156,6 +156,8 @@ const App = {
     this.importFileInput = document.getElementById('importFileInput');
     this.btnClearEntireWeek = document.getElementById('btnClearEntireWeek');
     this.btnResetToDefaults = document.getElementById('btnResetToDefaults');
+    this.btnClearStorageHeaderBtn = document.getElementById('btnClearStorageHeaderBtn');
+    this.btnClearLocalStorageModalBtn = document.getElementById('btnClearLocalStorageModalBtn');
 
     // Controles de Impresión
     this.printStockCheckbox = document.getElementById('printStockCheckbox');
@@ -224,6 +226,12 @@ const App = {
     this.importFileInput.addEventListener('change', (e) => this.handleImportData(e));
     this.btnClearEntireWeek.addEventListener('click', () => this.handleClearWeek());
     this.btnResetToDefaults.addEventListener('click', () => this.handleResetDefaults());
+    if (this.btnClearStorageHeaderBtn) {
+      this.btnClearStorageHeaderBtn.addEventListener('click', () => this.handleClearLocalStorage());
+    }
+    if (this.btnClearLocalStorageModalBtn) {
+      this.btnClearLocalStorageModalBtn.addEventListener('click', () => this.handleClearLocalStorage());
+    }
 
     // Búsqueda en administración de productos
     this.adminProductSearchInput.addEventListener('input', () => this.renderAdminProducts());
@@ -1794,6 +1802,25 @@ const App = {
       this.showToast('Datos de fábrica restaurados con éxito.');
       this.closeModal(this.modalUtilities);
     }
+  },
+
+  handleClearLocalStorage() {
+    const confirmed = confirm(
+      '⚠️ ATENCIÓN: ¿Deseas LIMPIAR EL LOCALSTORAGE?\n\n' +
+      'Esta acción vaciará la memoria guardada en el navegador y recargará la configuración y catálogo actualizado desde store.js.\n\n' +
+      '¿Deseas continuar?'
+    );
+
+    if (!confirmed) return;
+
+    window.appStore.clearLocalStorage(true);
+    this.showToast('¡LocalStorage limpiado con éxito! Se recargó el catálogo desde store.js.');
+
+    if (this.modalUtilities) {
+      this.closeModal(this.modalUtilities);
+    }
+
+    this.render();
   },
 
   // ====================================================

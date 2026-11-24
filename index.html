@@ -66,6 +66,15 @@
           <span id="todayDateText">Hoy es ...</span>
         </div>
 
+        <!-- Botón Limpiar LocalStorage directo en barra superior -->
+        <button id="btnClearStorageHeaderBtn" class="btn btn-outline btn-sm" title="Limpiar datos guardados en LocalStorage" style="color: var(--danger); border-color: var(--danger-border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Limpiar LocalStorage
+        </button>
+
         <!-- Botón Menú desplegable de utilidades -->
         <button id="btnOpenUtilitiesModal" class="btn btn-secondary btn-sm" title="Opciones de respaldo y limpieza">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -763,15 +772,27 @@
           </button>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
           <label>Restablecer Datos de Demostración</label>
-          <p class="form-hint">Vuelve al estado inicial con hamburguesas, lomos, panchos y stock cargado de fábrica.</p>
+          <p class="form-hint">Vuelve al estado inicial con el catálogo oficial y stock cargado de fábrica.</p>
           <button id="btnResetToDefaults" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
             </svg>
             Restablecer Valores de Fábrica
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--danger); font-weight: 700;">Limpiar Memoria Local (LocalStorage)</label>
+          <p class="form-hint">Borra todo el almacenamiento local del navegador para actualizar con los cambios realizados en el código o reiniciar por completo.</p>
+          <button id="btnClearLocalStorageModalBtn" class="btn btn-danger-outline btn-sm" style="margin-top: 0.5rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Limpiar LocalStorage Ahora
           </button>
         </div>
 

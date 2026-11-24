@@ -52,7 +52,7 @@ const INITIAL_DATA = {
     },
     {
       id: 'p_07',
-      name: '.Armado del sandwich Max Pollo Food',
+      name: '.COMBO SANDW. MC POLLO FOOD (1 MEDALLÓN, 1CHEDDAR, L PEP CEB DESH, KET MAYOT) (PSDIV) (22274)',
       recipe: [{ breadId: 'b_sesamo', qty: 1 }]
     },
     {
@@ -246,7 +246,7 @@ const INITIAL_DATA = {
      ,
     {
       id: 'p_45',
-      name: '	SANDW. PHILLY CHEESE (CUADR, CEB TQ, MAYO CHIMI) PAN BRIOCHE (AGREGAR 22658-22661-21467) EMPOTADO (22660)',
+      name: 'SANDW. PHILLY CHEESE (CUADR, CEB TQ, MAYO CHIMI) PAN BRIOCHE (AGREGAR 22658-22661-21467) EMPOTADO (22660)',
       recipe: [{ breadId: 'b_brioche', qty: 1 }]
     }
     ,
@@ -356,6 +356,32 @@ class Store {
   resetToDefault() {
     this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
     this.save();
+  }
+
+  // Limpiar LocalStorage completamente
+  clearLocalStorage(reloadInitial = true) {
+    try {
+      localStorage.clear();
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Error al vaciar localStorage:', e);
+    }
+
+    if (reloadInitial) {
+      this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
+      this.save();
+    } else {
+      this.data = {
+        breadTypes: [],
+        products: [],
+        weeklyPlan: {
+          lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
+        }
+      };
+      this.save();
+    }
+    this.notify();
+    return true;
   }
 
   // Exportar datos a JSON
