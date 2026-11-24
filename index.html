@@ -783,6 +783,106 @@
     </div>
   </div>
 
+  <!-- ====================================================
+       MODAL 8: PEGAR PLANILLA EXCEL / CUADRO
+  ==================================================== -->
+  <div id="modalPasteExcel" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card" style="max-width: 720px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalPasteExcelTitle">Pegar Planilla de Productos</h3>
+          <p id="modalPasteExcelSubtitle" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+            Copia filas de tu Excel y el sistema cruzará automáticamente las descripciones con el catálogo.
+          </p>
+        </div>
+        <button class="btn-icon-only modal-close-btn" data-close="modalPasteExcel" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="gap: 1rem;">
+        
+        <!-- Opciones de importación rápida -->
+        <div class="paste-options-grid">
+          <div class="form-group">
+            <label for="pasteColOrderSelect">Estructura de las columnas:</label>
+            <select id="pasteColOrderSelect" class="form-control" style="font-size: 0.85rem;">
+              <option value="qty_prod">Col. 1: Cantidad | Col. 2: Descripción (Estándar)</option>
+              <option value="prod_qty">Col. 1: Descripción | Col. 2: Cantidad (Invertido)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="pasteDuplicateActionSelect">Si el producto ya existe en este día:</label>
+            <select id="pasteDuplicateActionSelect" class="form-control" style="font-size: 0.85rem;">
+              <option value="sum">Sumar a la cantidad existente</option>
+              <option value="replace">Reemplazar con la nueva cantidad</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Área de pegado -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="pasteExcelTextarea">Pega aquí el contenido copiado (Ctrl + V):</label>
+            <button type="button" id="btnClearPasteText" class="btn-link" style="font-size: 0.75rem;">Limpiar texto</button>
+          </div>
+          <textarea id="pasteExcelTextarea" class="form-control" rows="5" placeholder="Haz clic aquí y presiona Ctrl + V para pegar celdas copiadas de Excel...&#10;&#10;Ejemplo:&#10;25	COMBO SANDW. MC TASTY FOOD&#10;15	MILA BOX&#10;20	Pbt JQ (X2) (11660)"></textarea>
+          <span class="form-hint">Acepta automáticamente celdas de Excel, Google Sheets o texto separado por tabulaciones, comas o puntos y coma.</span>
+        </div>
+
+        <!-- Barra de resumen de análisis en vivo -->
+        <div id="pasteAnalysisSummaryBar" class="paste-summary-bar" style="display: none;">
+          <div class="summary-badge badge-matched">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span id="pasteMatchedCount">0</span> Coincidentes listos para agregar
+          </div>
+          <div class="summary-badge badge-unmatched" id="pasteUnmatchedBadge" style="display: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="pasteUnmatchedCount">0</span> No encontrados (se omitirán)
+          </div>
+        </div>
+
+        <!-- Tabla de Vista Previa en tiempo real -->
+        <div id="pastePreviewContainer" style="display: none; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <table class="clean-table" style="font-size: 0.8rem;">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Cant.</th>
+                <th>Texto Detectado (Columna 2)</th>
+                <th>Producto Reconocido en Catálogo</th>
+                <th style="width: 110px; text-align: right;">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="pastePreviewTableBody">
+              <!-- Inyectado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalPasteExcel">Cancelar</button>
+        <button type="button" id="btnConfirmImportPaste" class="btn btn-primary" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span id="btnConfirmImportPasteText">Cargar Productos</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Contenedor de Alertas Toast Flotantes -->
   <div id="toastContainer" class="toast-container"></div>
 

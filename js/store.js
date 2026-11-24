@@ -8,15 +8,16 @@ const STORAGE_KEY = 'stock_panes_app_v2';
 // Base de datos de catálogo oficial del usuario
 const INITIAL_DATA = {
   breadTypes: [
-    { id: 'b_sesamo', name: 'Pan c/sesamo', stock: 140 },
-    { id: 'b_alargado', name: 'Pan alargado', stock: 75 },
-    { id: 'b_bimbo_alargado', name: 'PAN BIMBO ALARGADO', stock: 60 },
-    { id: 'b_brioche', name: 'Pan brioche', stock: 90 },
-    { id: 'b_papa', name: 'Pan de papa', stock: 65 },
-    { id: 'b_croissant', name: 'Croissant', stock: 35 },
-    { id: 'b_pebete', name: 'Pebete', stock: 130 },
-    { id: 'b_bagel', name: 'Bagel', stock: 50 },
-    { id: 'b_ciabatta', name: 'Ciabatta', stock: 40 }
+    { id: 'b_sesamo', name: 'Pan c/sesamo', stock: 0 },
+    { id: 'b_alargado', name: 'Pan alargado', stock: 0 },
+    { id: 'b_bimbo_alargado', name: 'PAN BIMBO ALARGADO', stock: 0 },
+    { id: 'b_brioche', name: 'Pan brioche', stock: 0 },
+    { id: 'b_papa', name: 'Pan de papa', stock: 0 },
+    { id: 'b_croissant', name: 'Croissant', stock: 0 },
+    { id: 'b_pebete', name: 'Pebete', stock: 0 },
+    { id: 'b_bagel', name: 'Bagel', stock: 0 },
+    { id: 'b_ciabatta', name: 'Ciabatta', stock: 0 },
+    { id: 'b_miga', name: 'Miga', stock: 0}
   ],
   products: [
     {
@@ -97,7 +98,7 @@ const INITIAL_DATA = {
     {
       id: 'p_16',
       name: 'Show de hamburguesas',
-      recipe: [{ breadId: 'b_sesamo', qty: 1 }]
+      recipe: [{ breadId: 'b_sesamo', qty: 2 }]
     },
     {
       id: 'p_17',
@@ -172,7 +173,7 @@ const INITIAL_DATA = {
     {
       id: 'p_31',
       name: 'SANDW BAGEL MULTIC (JAM, QUE, LECH, TOM) (21603)',
-      recipe: [{ breadId: 'b_bagel', qty: 1 }]
+      recipe: [{ breadId: 'b_bagel', qty: 2}]
     },
     {
       id: 'p_32',
@@ -218,6 +219,47 @@ const INITIAL_DATA = {
       id: 'p_40',
       name: 'SAND. MAC CHEESE DOBLE (2H+2CHEDDAR)(TERMOSELLADO)(MELI) (1U) (22543)',
       recipe: [{ breadId: 'b_sesamo', qty: 1 }]
+    },
+    {
+      id: 'p_41',
+      name: 'SANDW. MIGA x 2 (Termosellado) (MELI) (22652)',
+      recipe: [{ breadId: 'b_miga', qty: 1 }]
+    }
+    ,
+    {
+      id: 'p_42',
+      name: 'SANDW. PBT J-Q (2506)',
+      recipe: [{ breadId: 'b_pebete', qty: 1 }]
+    }
+    ,
+    {
+      id: 'p_43',
+      name: 'TRIPLE J-Q EVENTOS (1U) (20094)',
+      recipe: [{ breadId: 'b_miga', qty: 1 }]
+    }
+    ,
+    {
+      id: 'p_44',
+      name: 'SANDW DE MILA CUADRADA (140G BTO) (FRITA) (20292)',
+      recipe: [{ breadId: 'b_pebete', qty: 1 }]
+    }
+     ,
+    {
+      id: 'p_45',
+      name: '	SANDW. PHILLY CHEESE (CUADR, CEB TQ, MAYO CHIMI) PAN BRIOCHE (AGREGAR 22658-22661-21467) EMPOTADO (22660)',
+      recipe: [{ breadId: 'b_brioche', qty: 1 }]
+    }
+    ,
+    {
+      id: 'p_46',
+      name: 'SANDW. MIGA (X 5) (11688)',
+      recipe: [{ breadId: 'b_miga', qty: 1 }]
+    }
+    ,
+    {
+      id: 'p_47',
+      name: 'SANDW. MIGA (X 5) (11688)',
+      recipe: [{ breadId: 'b_miga', qty: 1 }]
     }
   ],
   weeklyPlan: {

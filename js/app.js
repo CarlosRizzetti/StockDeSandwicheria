@@ -19,6 +19,9 @@ const App = {
     addingToDay: null,
     selectedProductToAdd: null,
     
+    // Estado del modal de pegar desde Excel
+    pastingToDay: null,
+    
     // Estado de edición de receta
     editingProductId: null,
     editingBreadId: null,
@@ -162,6 +165,22 @@ const App = {
     this.btnSelectTodayStockPrint = document.getElementById('btnSelectTodayStockPrint');
     this.btnUnselectAllPrint = document.getElementById('btnUnselectAllPrint');
     this.printDateStamp = document.getElementById('printDateStamp');
+
+    // Modal Pegar Planilla Excel
+    this.modalPasteExcel = document.getElementById('modalPasteExcel');
+    this.modalPasteExcelTitle = document.getElementById('modalPasteExcelTitle');
+    this.pasteColOrderSelect = document.getElementById('pasteColOrderSelect');
+    this.pasteDuplicateActionSelect = document.getElementById('pasteDuplicateActionSelect');
+    this.pasteExcelTextarea = document.getElementById('pasteExcelTextarea');
+    this.btnClearPasteText = document.getElementById('btnClearPasteText');
+    this.pasteAnalysisSummaryBar = document.getElementById('pasteAnalysisSummaryBar');
+    this.pasteMatchedCount = document.getElementById('pasteMatchedCount');
+    this.pasteUnmatchedBadge = document.getElementById('pasteUnmatchedBadge');
+    this.pasteUnmatchedCount = document.getElementById('pasteUnmatchedCount');
+    this.pastePreviewContainer = document.getElementById('pastePreviewContainer');
+    this.pastePreviewTableBody = document.getElementById('pastePreviewTableBody');
+    this.btnConfirmImportPaste = document.getElementById('btnConfirmImportPaste');
+    this.btnConfirmImportPasteText = document.getElementById('btnConfirmImportPasteText');
 
     // Toast Container
     this.toastContainer = document.getElementById('toastContainer');
@@ -321,6 +340,24 @@ const App = {
 
     if (this.btnPrintSelectedTables) {
       this.btnPrintSelectedTables.addEventListener('click', () => this.handlePrint());
+    }
+
+    // Eventos de Pegado desde Excel
+    if (this.pasteExcelTextarea) {
+      this.pasteExcelTextarea.addEventListener('input', () => this.handlePasteInputChange());
+    }
+    if (this.pasteColOrderSelect) {
+      this.pasteColOrderSelect.addEventListener('change', () => this.handlePasteInputChange());
+    }
+    if (this.btnClearPasteText) {
+      this.btnClearPasteText.addEventListener('click', () => {
+        this.pasteExcelTextarea.value = '';
+        this.handlePasteInputChange();
+        this.pasteExcelTextarea.focus();
+      });
+    }
+    if (this.btnConfirmImportPaste) {
+      this.btnConfirmImportPaste.addEventListener('click', () => this.handleConfirmImportPaste());
     }
   },
 
@@ -482,6 +519,14 @@ const App = {
                 </button>
               ` : ''}
 
+              <button class="btn btn-outline btn-sm btn-paste-day-table" data-day="${day.key}" title="Pegar contenido copiado de Excel o planilla">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                </svg>
+                Pegar planilla
+              </button>
+
               <button class="btn btn-primary btn-sm btn-add-day-prod" data-day="${day.key}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
@@ -502,9 +547,18 @@ const App = {
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
                 <p>No hay productos planificados para el ${day.name}.</p>
-                <button class="btn btn-outline btn-sm btn-add-day-prod" data-day="${day.key}">
-                  + Agregar primer producto
-                </button>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
+                  <button class="btn btn-outline btn-sm btn-add-day-prod" data-day="${day.key}">
+                    + Agregar manual
+                  </button>
+                  <button class="btn btn-primary btn-sm btn-paste-day-table" data-day="${day.key}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                    </svg>
+                    Pegar desde Excel
+                  </button>
+                </div>
               </div>
             ` : `
               <table class="clean-table">
@@ -580,6 +634,13 @@ const App = {
       btn.addEventListener('click', () => {
         const dayKey = btn.getAttribute('data-day');
         this.openAddProductToDayModal(dayKey);
+      });
+    });
+
+    this.daysCardsContainer.querySelectorAll('.btn-paste-day-table').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dayKey = btn.getAttribute('data-day');
+        this.openPasteExcelModal(dayKey);
       });
     });
 
@@ -894,6 +955,287 @@ const App = {
     }
 
     this.closeModal(this.modalAddDayProduct);
+  },
+
+  // ====================================================
+  // MODAL: PEGAR TABLA DE EXCEL / CUADRO
+  // ====================================================
+  openPasteExcelModal(dayKey) {
+    this.state.pastingToDay = dayKey;
+    const dayInfo = window.stockCalculator.getDayInfo(dayKey);
+
+    this.modalPasteExcelTitle.textContent = `Pegar Planilla - ${dayInfo.name}`;
+    this.pasteExcelTextarea.value = '';
+    this.pasteAnalysisSummaryBar.style.display = 'none';
+    this.pastePreviewContainer.style.display = 'none';
+    this.pastePreviewTableBody.innerHTML = '';
+    this.btnConfirmImportPaste.disabled = true;
+    this.btnConfirmImportPasteText.textContent = `Cargar Productos al ${dayInfo.name}`;
+
+    this.openModal(this.modalPasteExcel);
+    setTimeout(() => this.pasteExcelTextarea.focus(), 150);
+  },
+
+  handlePasteInputChange() {
+    const text = this.pasteExcelTextarea.value;
+    const dayKey = this.state.pastingToDay;
+    const dayInfo = dayKey ? window.stockCalculator.getDayInfo(dayKey) : { name: 'Día' };
+
+    if (!text || !text.trim()) {
+      this.pasteAnalysisSummaryBar.style.display = 'none';
+      this.pastePreviewContainer.style.display = 'none';
+      this.pastePreviewTableBody.innerHTML = '';
+      this.btnConfirmImportPaste.disabled = true;
+      this.btnConfirmImportPasteText.textContent = `Cargar Productos al ${dayInfo.name}`;
+      return;
+    }
+
+    const result = this.parsePastedText(text);
+
+    this.pasteAnalysisSummaryBar.style.display = 'flex';
+    this.pasteMatchedCount.textContent = result.matchedCount;
+
+    if (result.unmatchedCount > 0) {
+      this.pasteUnmatchedBadge.style.display = 'inline-flex';
+      this.pasteUnmatchedCount.textContent = result.unmatchedCount;
+    } else {
+      this.pasteUnmatchedBadge.style.display = 'none';
+    }
+
+    if (result.rows.length === 0) {
+      this.pastePreviewContainer.style.display = 'none';
+      this.pastePreviewTableBody.innerHTML = '';
+      this.btnConfirmImportPaste.disabled = true;
+      this.btnConfirmImportPasteText.textContent = `Cargar Productos al ${dayInfo.name}`;
+      return;
+    }
+
+    this.pastePreviewContainer.style.display = 'block';
+
+    let html = '';
+    result.rows.forEach(r => {
+      const recipeSummary = r.product ? window.stockCalculator.getProductRecipeSummary(r.product) : '';
+
+      html += `
+        <tr style="${r.matched ? '' : 'opacity: 0.6; background-color: #f8fafc;'}">
+          <td style="font-weight: 700;">${r.qty}</td>
+          <td>
+            <div style="font-weight: 500;">${this.escapeHtml(r.rawDesc)}</div>
+          </td>
+          <td>
+            ${r.matched ? `
+              <strong style="color: var(--text-main);">${this.escapeHtml(r.product.name)}</strong>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">${this.escapeHtml(recipeSummary)}</div>
+            ` : `
+              <span style="color: var(--text-subtle); font-style: italic;">No encontrado en catálogo</span>
+            `}
+          </td>
+          <td style="text-align: right;">
+            ${r.matched ? `
+              <span class="badge-tag-matched">✓ Coincide</span>
+            ` : `
+              <span class="badge-tag-unmatched">Omitir</span>
+            `}
+          </td>
+        </tr>
+      `;
+    });
+
+    this.pastePreviewTableBody.innerHTML = html;
+
+    if (result.matchedCount > 0) {
+      this.btnConfirmImportPaste.disabled = false;
+      this.btnConfirmImportPasteText.textContent = `Cargar ${result.matchedCount} Producto(s) al ${dayInfo.name}`;
+    } else {
+      this.btnConfirmImportPaste.disabled = true;
+      this.btnConfirmImportPasteText.textContent = `Sin coincidencias para cargar`;
+    }
+  },
+
+  findProductMatch(rawText) {
+    if (!rawText) return null;
+    const clean = rawText.trim();
+    if (!clean) return null;
+
+    const products = window.appStore.getProducts();
+
+    // 1. Coincidencia exacta (case insensitive)
+    const exact = products.find(p => p.name.toLowerCase() === clean.toLowerCase());
+    if (exact) return exact;
+
+    // Normalizador de texto
+    const normalize = (str) => {
+      return (str || '')
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // sin acentos
+        .replace(/^[.\s\-_]+/, "")        // quitar puntos iniciales (ej: ".Armado...")
+        .replace(/[^a-z0-9]/g, " ")       // solo alfanumérico
+        .replace(/\s+/g, " ")             // espacios simples
+        .trim();
+    };
+
+    const normQuery = normalize(clean);
+    if (!normQuery) return null;
+
+    // 2. Coincidencia normalizada exacta
+    const normMatch = products.find(p => normalize(p.name) === normQuery);
+    if (normMatch) return normMatch;
+
+    // 3. Coincidencia por código de producto (4 a 6 dígitos: ej 11660, 22541, 22569, etc.)
+    const codes = clean.match(/\b\d{4,6}\b/g);
+    if (codes && codes.length > 0) {
+      for (const code of codes) {
+        const codeMatches = products.filter(p => p.name.includes(code));
+        if (codeMatches.length === 1) {
+          return codeMatches[0];
+        }
+      }
+    }
+
+    // 4. Inclusión o Substring directo
+    const subMatches = products.filter(p => {
+      const pNorm = normalize(p.name);
+      return pNorm.includes(normQuery) || normQuery.includes(pNorm);
+    });
+    if (subMatches.length === 1) {
+      return subMatches[0];
+    }
+
+    // 5. Coincidencia de tokens/palabras clave
+    const queryWords = normQuery.split(" ").filter(w => w.length > 2);
+    if (queryWords.length > 0) {
+      let bestProd = null;
+      let maxMatchedWords = 0;
+
+      products.forEach(p => {
+        const pWords = normalize(p.name).split(" ").filter(w => w.length > 2);
+        const matches = queryWords.filter(qw => pWords.includes(qw)).length;
+        if (matches > maxMatchedWords && matches >= Math.min(2, queryWords.length)) {
+          maxMatchedWords = matches;
+          bestProd = p;
+        }
+      });
+
+      if (bestProd && maxMatchedWords >= Math.ceil(queryWords.length * 0.5)) {
+        return bestProd;
+      }
+    }
+
+    return null;
+  },
+
+  parsePastedText(text) {
+    if (!text || !text.trim()) {
+      return { rows: [], matchedCount: 0, unmatchedCount: 0 };
+    }
+
+    const lines = text.split(/\r?\n/);
+    const order = this.pasteColOrderSelect.value; // 'qty_prod' o 'prod_qty'
+    const parsedRows = [];
+    let matchedCount = 0;
+    let unmatchedCount = 0;
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      // Separadores: Tabulador, Punto y coma, Coma, o dos o más espacios
+      let parts = trimmed.split('\t');
+      if (parts.length < 2) parts = trimmed.split(';');
+      if (parts.length < 2) parts = trimmed.split('  ');
+      if (parts.length < 2) parts = trimmed.split(',');
+
+      if (parts.length < 2) {
+        // Si no hay separador, intentar regex si empieza con un número: ej "15 Hamburguesa"
+        const numMatch = trimmed.match(/^(\d+)\s+(.+)$/);
+        if (numMatch) {
+          parts = [numMatch[1], numMatch[2]];
+        } else {
+          return; // no interpretable como 2 columnas
+        }
+      }
+
+      let col1 = parts[0].trim();
+      let col2 = parts.slice(1).join(' ').trim();
+
+      // Detección automática en caso de inversión
+      let rawQtyStr = order === 'qty_prod' ? col1 : col2;
+      let rawDesc = order === 'qty_prod' ? col2 : col1;
+
+      // Si la cantidad asignada no es número pero la descripción sí contiene solo un número, invertir
+      const cleanQty1 = rawQtyStr.replace(/[^\d]/g, '');
+      const cleanQty2 = rawDesc.replace(/[^\d]/g, '');
+      if (!cleanQty1 && cleanQty2 && rawDesc.length <= 5) {
+        const temp = rawQtyStr;
+        rawQtyStr = rawDesc;
+        rawDesc = temp;
+      }
+
+      const qty = parseInt(rawQtyStr.replace(/[^\d]/g, ''), 10);
+
+      // Si no hay cantidad válida mayor a 0 o parece un encabezado, omitir
+      if (isNaN(qty) || qty <= 0) {
+        return;
+      }
+
+      // Buscar coincidencia en catálogo
+      const matchedProduct = this.findProductMatch(rawDesc);
+
+      if (matchedProduct) {
+        matchedCount++;
+        parsedRows.push({
+          lineIndex: index + 1,
+          rawDesc,
+          qty,
+          matched: true,
+          product: matchedProduct
+        });
+      } else {
+        unmatchedCount++;
+        parsedRows.push({
+          lineIndex: index + 1,
+          rawDesc,
+          qty,
+          matched: false,
+          product: null
+        });
+      }
+    });
+
+    return { rows: parsedRows, matchedCount, unmatchedCount };
+  },
+
+  handleConfirmImportPaste() {
+    if (!this.state.pastingToDay) return;
+    const text = this.pasteExcelTextarea.value;
+    const parseResult = this.parsePastedText(text);
+    const matchedRows = parseResult.rows.filter(r => r.matched && r.product);
+
+    if (matchedRows.length === 0) {
+      alert('No se encontraron productos coincidentes con el catálogo para cargar.');
+      return;
+    }
+
+    const dayKey = this.state.pastingToDay;
+    const duplicateAction = this.pasteDuplicateActionSelect.value; // 'sum' | 'replace'
+    let addedCount = 0;
+
+    matchedRows.forEach(row => {
+      const res = window.appStore.addProductToDay(dayKey, row.product.id, row.qty);
+      if (res && res.alreadyExists) {
+        if (duplicateAction === 'replace') {
+          res.updateQty(false); // sobrescribir cantidad
+        } else {
+          res.updateQty(true);  // sumar cantidad
+        }
+      }
+      addedCount++;
+    });
+
+    const dayInfo = window.stockCalculator.getDayInfo(dayKey);
+    this.showToast(`¡Se cargaron ${addedCount} producto(s) exitosamente al ${dayInfo.name}!`);
+    this.closeModal(this.modalPasteExcel);
   },
 
   // ====================================================
