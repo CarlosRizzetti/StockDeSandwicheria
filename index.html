@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Stock de Panes - Sandwichería & Gastro</title>
+  
+  <!-- Tipografía moderna Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Estilos principales -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ====================================================
+       CABECERA PRINCIPAL Y NAVEGACIÓN
+  ==================================================== -->
+  <header class="main-header">
+    <div class="header-container">
+      
+      <!-- Marca / Logo -->
+      <div class="header-brand">
+        <div class="brand-icon">
+          <!-- Icono de Pan / Sándwich -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 10h-1.26A8 8 0 1 0 4 16.3V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.7a8 8 0 0 0-2-6.3Z"/>
+            <path d="M6 14h12"/>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <h1>Stock de Panes</h1>
+          <p>Planificación semanal y cálculo automático de requerimientos</p>
+        </div>
+      </div>
+
+      <!-- Pestañas de Navegación entre Vistas -->
+      <nav class="header-nav" role="tablist">
+        <button id="navPlanificacionBtn" class="nav-tab-btn active" role="tab" aria-selected="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Planificación Semanal
+        </button>
+        <button id="navAdminBtn" class="nav-tab-btn" role="tab" aria-selected="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          Administrar Productos y Stock
+        </button>
+      </nav>
+
+      <!-- Información y Menú rápido de utilidades -->
+      <div class="header-actions">
+        <div id="todayDateBadge" class="date-pill">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span id="todayDateText">Hoy es ...</span>
+        </div>
+
+        <!-- Botón Menú desplegable de utilidades -->
+        <button id="btnOpenUtilitiesModal" class="btn btn-secondary btn-sm" title="Opciones de respaldo y limpieza">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="12" cy="5" r="1"/>
+            <circle cx="12" cy="19" r="1"/>
+          </svg>
+          Opciones
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ====================================================
+       CONTENEDOR CENTRAL DE VISTAS
+  ==================================================== -->
+  <main class="main-wrapper">
+
+    <!-- ====================================================
+         VISTA 1: PLANIFICACIÓN SEMANAL (2 COLUMNAS 50% / 50%)
+    ==================================================== -->
+    <section id="viewPlanificacion" class="view-section active">
+
+      <!-- ENCABEZADO EXCLUSIVO PARA IMPRESIÓN (Visible solo en papel o PDF) -->
+      <div class="print-only-header">
+        <div class="print-header-brand">
+          <h2>Stock de Panes - Control Gastronómico</h2>
+          <p>Planificación y Requerimientos de Panificados</p>
+        </div>
+        <div class="print-header-date" id="printDateStamp">
+          <!-- Fecha y hora inyectada al imprimir -->
+        </div>
+      </div>
+
+      <!-- BARRA DE CONTROL DE IMPRESIÓN (Oculta en la hoja impresa) -->
+      <div class="print-control-bar no-print">
+        <div class="print-bar-info">
+          <div class="print-bar-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+          </div>
+          <div class="print-bar-text">
+            <strong>Imprimir selección de tablas:</strong>
+            <span>Tilda las tablas de los días que quieras y la de stock. En la hoja impresa quedarán organizadas una debajo de la otra.</span>
+          </div>
+        </div>
+
+        <div class="print-bar-actions">
+          <div class="print-quick-links">
+            <button type="button" id="btnSelectAllPrint" class="btn-link">Marcar todas</button>
+            <span class="link-divider">|</span>
+            <button type="button" id="btnSelectTodayStockPrint" class="btn-link">Solo Hoy + Stock</button>
+            <span class="link-divider">|</span>
+            <button type="button" id="btnUnselectAllPrint" class="btn-link">Desmarcar</button>
+          </div>
+
+          <button type="button" id="btnPrintSelectedTables" class="btn btn-primary btn-print-main">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Imprimir Selección (<span id="printSelectedCount">2</span>)
+          </button>
+        </div>
+      </div>
+
+      <div class="split-dashboard">
+
+        <!-- ====================================================
+             COLUMNA IZQUIERDA (50%): PLANIFICACIÓN POR DÍA
+        ==================================================== -->
+        <div class="planning-column">
+          
+          <div class="section-hero">
+            <div>
+              <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                Planificación Diaria de Productos
+              </h2>
+              <p>Carga los sándwiches y productos estimados para cada día de la semana.</p>
+            </div>
+            
+            <button id="btnAdminShortcut" class="btn btn-outline btn-sm">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Administrar Catálogo
+            </button>
+          </div>
+
+          <!-- Filtro rápido de días para desplazarse con rapidez -->
+          <div class="day-quick-filter" id="dayFilterTabs">
+            <button class="filter-chip active" data-filter="todos">Ver Todos</button>
+            <button class="filter-chip" data-filter="lunes">Lunes</button>
+            <button class="filter-chip" data-filter="martes">Martes</button>
+            <button class="filter-chip" data-filter="miercoles">Miércoles</button>
+            <button class="filter-chip" data-filter="jueves">Jueves</button>
+            <button class="filter-chip" data-filter="viernes">Viernes</button>
+            <button class="filter-chip" data-filter="sabado">Sábado</button>
+            <button class="filter-chip" data-filter="domingo">Domingo</button>
+          </div>
+
+          <!-- Contenedor donde se renderizan las 7 tablas de días -->
+          <div class="days-container" id="daysCardsContainer">
+            <!-- Inyectado dinámicamente por app.js -->
+          </div>
+
+        </div>
+
+        <!-- ====================================================
+             COLUMNA DERECHA (50%): PANEL DE CONTROL DE STOCK
+        ==================================================== -->
+        <div class="stock-column">
+          
+          <div class="stock-panel-card">
+            
+            <div class="stock-header">
+              <div class="stock-header-title">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <label class="print-card-checkbox-label" title="Incluir tabla de stock en la hoja impresa">
+                    <input type="checkbox" id="printStockCheckbox" class="print-checkbox-input" checked>
+                    <span class="print-check-indicator"></span>
+                    <span class="print-check-tag">Imprimir</span>
+                  </label>
+                  <h2>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                      <path d="m3.3 7 8.7 5 8.7-5"/>
+                      <path d="M12 22V12"/>
+                    </svg>
+                    Control y Resumen de Stock
+                  </h2>
+                </div>
+                <button id="btnWeeklyPurchaseModal" class="btn btn-secondary btn-sm" title="Calcular pedido semanal para la panadería">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                  </svg>
+                  Pedido Semanal
+                </button>
+              </div>
+
+              <!-- Selector para consultar requerimientos de cualquier día de la semana -->
+              <div class="day-selector-bar">
+                <label for="stockConsultDaySelect">Consultar requerimiento de:</label>
+                <select id="stockConsultDaySelect" class="day-select-dropdown">
+                  <option value="hoy">Hoy (Día Actual)</option>
+                  <option value="manana">Mañana</option>
+                  <option value="lunes">Lunes</option>
+                  <option value="martes">Martes</option>
+                  <option value="miercoles">Miércoles</option>
+                  <option value="jueves">Jueves</option>
+                  <option value="viernes">Viernes</option>
+                  <option value="sabado">Sábado</option>
+                  <option value="domingo">Domingo</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Fila de métricas visuales clave -->
+            <div class="metrics-row" id="stockKpiMetrics">
+              <div class="metric-box">
+                <span class="metric-label">Stock Total</span>
+                <span class="metric-val" id="metricTotalStock">0</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-label">Requerido Hoy</span>
+                <span class="metric-val" id="metricReqToday">0</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-label">Requerido Mañana</span>
+                <span class="metric-val" id="metricReqTomorrow">0</span>
+              </div>
+              <div class="metric-box" id="metricShortagesCard">
+                <span class="metric-label">Faltantes</span>
+                <span class="metric-val" id="metricShortagesCount">0</span>
+              </div>
+            </div>
+
+            <!-- Tabla principal de Stock -->
+            <div class="table-responsive">
+              <table class="clean-table stock-table">
+                <thead>
+                  <tr>
+                    <th>Tipo de Pan</th>
+                    <th>Stock Disponible</th>
+                    <th>Requerido Hoy</th>
+                    <th>Requerido Mañana</th>
+                    <th id="thSelectedDayReq" style="display: none;">Requerido Seleccionado</th>
+                    <th id="thStockRemaining">Stock Restante</th>
+                  </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                  <!-- Inyectado dinámicamente por app.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Acciones al pie del panel de stock -->
+            <div class="stock-footer-actions">
+              <button id="btnDeductDayStock" class="btn btn-outline btn-sm" title="Descuenta los panes necesarios hoy de tu stock real en inventario">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14"/>
+                </svg>
+                Descontar Requerimiento de Hoy del Stock Real
+              </button>
+
+              <button id="btnQuickAdjustStock" class="btn btn-primary btn-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Actualizar / Cargar Stock
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================
+         VISTA 2: ADMINISTRACIÓN DE PRODUCTOS Y PANES
+    ==================================================== -->
+    <section id="viewAdmin" class="view-section">
+      <div class="admin-view-container">
+        
+        <div class="admin-header-bar">
+          <div>
+            <h2>Administración de Productos y Stock</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Configura tus recetas, productos y tipos de panes disponibles en el local.</p>
+          </div>
+          <button id="btnBackToPlanning" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Volver a Planificación Semanal
+          </button>
+        </div>
+
+        <div class="admin-grid">
+
+          <!-- SECCIÓN A: CATÁLOGO DE PRODUCTOS -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                Catálogo de Productos
+              </h3>
+              <button id="btnOpenNewProductModal" class="btn btn-primary btn-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Nuevo Producto
+              </button>
+            </div>
+
+            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); background-color: #fafbfc;">
+              <div class="search-input-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="adminProductSearchInput" class="search-box" placeholder="Buscar por nombre...">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Panes Requeridos por Unidad (Receta)</th>
+                    <th style="text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="adminProductsTableBody">
+                  <!-- Inyectado dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECCIÓN B: TIPOS DE PANES Y STOCK DISPONIBLE -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                  <path d="M3 6h18"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+                Tipos de Panes y Stock Disponible
+              </h3>
+              <button id="btnOpenNewBreadModal" class="btn btn-primary btn-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Nuevo Tipo de Pan
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Nombre del Pan</th>
+                    <th>Stock Actual</th>
+                    <th>En Uso Por</th>
+                    <th style="text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="adminBreadsTableBody">
+                  <!-- Inyectado dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================
+       MODAL 1: AGREGAR PRODUCTO A UN DÍA
+  ==================================================== -->
+  <div id="modalAddDayProduct" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalAddDayProductTitle">Agregar Producto al Día</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalAddDayProduct" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Campo de búsqueda reactiva instantánea -->
+        <div class="form-group">
+          <label for="dayProductSearchInput">1. Buscar y seleccionar producto:</label>
+          <div class="search-input-wrapper" style="max-width: 100%;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="dayProductSearchInput" class="search-box" placeholder="Escribe el nombre del sándwich o producto..." autocomplete="off">
+          </div>
+
+          <!-- Lista de resultados filtrados -->
+          <div id="dayProductSearchResults" class="quick-product-search-list">
+            <!-- Inyectado en tiempo real -->
+          </div>
+        </div>
+
+        <!-- Producto Seleccionado -->
+        <div id="daySelectedProductInfo" style="display: none; padding: 0.75rem 1rem; background-color: var(--bg-subtle); border-radius: var(--radius-md);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Producto seleccionado:</div>
+          <div id="daySelectedProductName" style="font-size: 1rem; font-weight: 700; color: var(--text-main);"></div>
+          <div id="daySelectedProductRecipe" style="font-size: 0.8rem; color: var(--primary-text); margin-top: 0.2rem;"></div>
+        </div>
+
+        <!-- Advertencia si el producto ya existe en ese día -->
+        <div id="dayDuplicateWarning" class="duplicate-warning-banner" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <strong>¡Producto ya agregado a este día!</strong>
+            <p id="dayDuplicateWarningText" style="margin-top: 0.25rem;">Actualmente tiene X unidades. Si confirmas, se incrementará la cantidad ingresada.</p>
+          </div>
+        </div>
+
+        <!-- Campo de cantidad requerida -->
+        <div class="form-group">
+          <label for="dayProductQtyInput">2. Cantidad requerida para este día:</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="number" id="dayProductQtyInput" class="form-control" min="1" step="1" value="10" style="font-size: 1.1rem; font-weight: 700; max-width: 140px;">
+            <div style="display: flex; gap: 0.3rem;">
+              <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-add="5">+5</button>
+              <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-add="10">+10</button>
+              <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-add="20">+20</button>
+              <button type="button" class="btn btn-outline btn-sm quick-qty-btn" data-add="50">+50</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalAddDayProduct">Cancelar</button>
+        <button type="button" id="btnConfirmAddDayProduct" class="btn btn-primary" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Agregar a la Planificación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 2: CREAR / EDITAR PRODUCTO (ADMIN)
+  ==================================================== -->
+  <div id="modalProductForm" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalProductFormTitle">Nuevo Producto</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalProductForm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="productForm">
+        <div class="modal-body">
+          <input type="hidden" id="productFormId">
+          
+          <div class="form-group">
+            <label for="productFormName">Nombre del Producto / Sándwich *</label>
+            <input type="text" id="productFormName" class="form-control" placeholder="Ej: Hamburguesa Completa, Sándwich de Milanesa..." required>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label>Receta: Panes que consume por unidad *</label>
+              <button type="button" id="btnAddRecipeBreadRow" class="btn btn-outline btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                + Asociar otro tipo de pan
+              </button>
+            </div>
+            <p class="form-hint">Indica cuántos panes de cada tipo se necesitan para preparar 1 unidad de este producto.</p>
+            
+            <!-- Filas dinámicas de panes -->
+            <div id="recipeRowsContainer" class="recipe-builder-list">
+              <!-- Renderizado dinámico -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalProductForm">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 3: CREAR / EDITAR TIPO DE PAN (ADMIN)
+  ==================================================== -->
+  <div id="modalBreadForm" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalBreadFormTitle">Nuevo Tipo de Pan</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalBreadForm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="breadForm">
+        <div class="modal-body">
+          <input type="hidden" id="breadFormId">
+
+          <div class="form-group">
+            <label for="breadFormName">Nombre del Tipo de Pan *</label>
+            <input type="text" id="breadFormName" class="form-control" placeholder="Ej: Pan de Hamburguesa, Pan de Lomito, Baguette..." required>
+          </div>
+
+          <div class="form-group">
+            <label for="breadFormStock">Stock Inicial Disponible</label>
+            <input type="number" id="breadFormStock" class="form-control" min="0" step="1" value="0" placeholder="0">
+            <span class="form-hint">Cantidad física que tienes actualmente en el local.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalBreadForm">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Pan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 4: AJUSTAR STOCK RÁPIDO
+  ==================================================== -->
+  <div id="modalAdjustStock" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Actualizar Stock Disponible</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalAdjustStock">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="adjustStockForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="adjustStockBreadSelect">Selecciona el Pan:</label>
+            <select id="adjustStockBreadSelect" class="form-control"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="adjustStockCurrentVal">Stock Actual Registrado:</label>
+            <input type="text" id="adjustStockCurrentVal" class="form-control" readonly style="background-color: var(--bg-subtle); font-weight: 700;">
+          </div>
+
+          <div class="form-group">
+            <label for="adjustStockNewVal">Nuevo Stock Disponible:</label>
+            <input type="number" id="adjustStockNewVal" class="form-control" min="0" step="1" required style="font-size: 1.25rem; font-weight: 800;">
+            
+            <div style="display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline btn-sm quick-stock-add" data-delta="10">+10</button>
+              <button type="button" class="btn btn-outline btn-sm quick-stock-add" data-delta="25">+25</button>
+              <button type="button" class="btn btn-outline btn-sm quick-stock-add" data-delta="50">+50</button>
+              <button type="button" class="btn btn-outline btn-sm quick-stock-add" data-delta="100">+100</button>
+              <button type="button" class="btn btn-outline btn-sm quick-stock-add" data-delta="-10">-10</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalAdjustStock">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Actualizar Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 5: DESGLOSE DE REQUERIMIENTOS (TOOLTIP DETALLADO)
+  ==================================================== -->
+  <div id="modalBreakdown" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalBreakdownTitle">Detalle de Demanda de Pan</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalBreakdown">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Los siguientes productos de la planificación están consumiendo este tipo de pan:
+        </p>
+        <div id="modalBreakdownList" class="breakdown-list">
+          <!-- Inyectado dinámicamente -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalBreakdown">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 6: PEDIDO SEMANAL (RESUMEN DE COMPRA A PANADERÍA)
+  ==================================================== -->
+  <div id="modalWeeklyPurchase" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>Resumen Semanal de Compras a Panadería</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalWeeklyPurchase">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Cálculo consolidado de todos los panes requeridos de lunes a domingo vs el stock físico que tienes hoy.
+        </p>
+
+        <div class="table-responsive">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Tipo de Pan</th>
+                <th>Stock Actual</th>
+                <th>Total Semana</th>
+                <th>Balance</th>
+                <th>Comprar sugerido</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyPurchaseTableBody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalWeeklyPurchase">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 7: UTILIDADES, RESPALDOS Y LIMPIEZA
+  ==================================================== -->
+  <div id="modalUtilities" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Opciones de Respaldo y Gestión</h3>
+        <button class="btn-icon-only modal-close-btn" data-close="modalUtilities">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <div class="form-group" style="padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+          <label>Copia de Seguridad (JSON)</label>
+          <p class="form-hint">Descarga todos tus productos, stock y planificaciones en un archivo de respaldo o restaura uno anterior.</p>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button id="btnExportData" class="btn btn-outline btn-sm">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Exportar Respaldo
+            </button>
+            <label class="btn btn-outline btn-sm" style="margin: 0; cursor: pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Importar Respaldo
+              <input type="file" id="importFileInput" accept=".json" style="display: none;">
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" style="padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+          <label>Limpieza de Planificación</label>
+          <p class="form-hint">Vacía todos los productos cargados en los siete días para comenzar una nueva semana.</p>
+          <button id="btnClearEntireWeek" class="btn btn-danger-outline btn-sm" style="margin-top: 0.5rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Vaciar Toda la Semana
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Restablecer Datos de Demostración</label>
+          <p class="form-hint">Vuelve al estado inicial con hamburguesas, lomos, panchos y stock cargado de fábrica.</p>
+          <button id="btnResetToDefaults" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            Restablecer Valores de Fábrica
+          </button>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn" data-close="modalUtilities">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Alertas Toast Flotantes -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts en orden de dependencia -->
+  <script src="js/store.js"></script>
+  <script src="js/calculations.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
