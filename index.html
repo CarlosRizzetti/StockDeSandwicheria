@@ -146,13 +146,10 @@
         </div>
       </div>
 
-      <div class="split-dashboard">
+      <div class="weekly-layout-container">
 
-        <!-- ====================================================
-             COLUMNA IZQUIERDA (50%): PLANIFICACIÓN POR DÍA
-        ==================================================== -->
-        <div class="planning-column">
-          
+        <!-- ENCABEZADO Y FILTRO RÁPIDO DE DÍAS -->
+        <div class="planning-header-area">
           <div class="section-hero">
             <div>
               <h2>
@@ -163,9 +160,9 @@
                   <line x1="16" y1="17" x2="8" y2="17"/>
                   <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                Planificación Diaria de Productos
+                Planificación Semanal y Stock en Tiempo Real
               </h2>
-              <p>Carga los sándwiches y productos estimados para cada día de la semana.</p>
+              <p>Al lado de cada día verás los panes requeridos y el stock descontado en tiempo real. Al final de la página encontrarás el resumen general consolidado.</p>
             </div>
             
             <button id="btnAdminShortcut" class="btn btn-outline btn-sm">
@@ -177,9 +174,9 @@
             </button>
           </div>
 
-          <!-- Filtro rápido de días para desplazarse con rapidez -->
+          <!-- Filtro rápido de días -->
           <div class="day-quick-filter" id="dayFilterTabs">
-            <button class="filter-chip active" data-filter="todos">Ver Todos</button>
+            <button class="filter-chip active" data-filter="todos">Ver Todos los Días</button>
             <button class="filter-chip" data-filter="lunes">Lunes</button>
             <button class="filter-chip" data-filter="martes">Martes</button>
             <button class="filter-chip" data-filter="miercoles">Miércoles</button>
@@ -187,20 +184,21 @@
             <button class="filter-chip" data-filter="viernes">Viernes</button>
             <button class="filter-chip" data-filter="sabado">Sábado</button>
             <button class="filter-chip" data-filter="domingo">Domingo</button>
+            <button class="filter-chip filter-chip-summary" data-filter="resumen" id="btnFilterJumpSummary">📊 Ver Resumen General de Stock</button>
           </div>
-
-          <!-- Contenedor donde se renderizan las 7 tablas de días -->
-          <div class="days-container" id="daysCardsContainer">
-            <!-- Inyectado dinámicamente por app.js -->
-          </div>
-
         </div>
 
         <!-- ====================================================
-             COLUMNA DERECHA (50%): PANEL DE CONTROL DE STOCK
+             LISTADO DE LOS 7 DÍAS (CON PRODUCTOS Y STOCK EN TIEMPO REAL)
         ==================================================== -->
-        <div class="stock-column">
-          
+        <div class="days-container" id="daysCardsContainer">
+          <!-- Inyectado dinámicamente por app.js -->
+        </div>
+
+        <!-- ====================================================
+             AL FINAL DE LOS DÍAS: PANEL GENERAL DE CONTROL Y RESUMEN DE STOCK
+        ==================================================== -->
+        <div class="global-stock-summary-wrapper" id="globalStockSummarySection">
           <div class="stock-panel-card">
             
             <div class="stock-header">
@@ -217,41 +215,40 @@
                       <path d="m3.3 7 8.7 5 8.7-5"/>
                       <path d="M12 22V12"/>
                     </svg>
-                    Control y Resumen de Stock
+                    Control y Resumen General de Stock de Panes
                   </h2>
                 </div>
-                <button id="btnWeeklyPurchaseModal" class="btn btn-secondary btn-sm" title="Calcular pedido semanal para la panadería">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="9" cy="21" r="1"/>
-                    <circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                  </svg>
-                  Pedido Semanal
-                </button>
-              </div>
 
-              <!-- Selector para consultar requerimientos de cualquier día de la semana -->
-              <div class="day-selector-bar">
-                <label for="stockConsultDaySelect">Consultar requerimiento de:</label>
-                <select id="stockConsultDaySelect" class="day-select-dropdown">
-                  <option value="hoy">Hoy (Día Actual)</option>
-                  <option value="manana">Mañana</option>
-                  <option value="lunes">Lunes</option>
-                  <option value="martes">Martes</option>
-                  <option value="miercoles">Miércoles</option>
-                  <option value="jueves">Jueves</option>
-                  <option value="viernes">Viernes</option>
-                  <option value="sabado">Sábado</option>
-                  <option value="domingo">Domingo</option>
-                </select>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                  <button id="btnWeeklyPurchaseModal" class="btn btn-secondary btn-sm" title="Calcular pedido semanal para la panadería">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="9" cy="21" r="1"/>
+                      <circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                    Pedido Semanal
+                  </button>
+
+                  <button id="btnQuickAdjustStock" class="btn btn-primary btn-sm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Actualizar / Cargar Stock
+                  </button>
+                </div>
               </div>
             </div>
 
             <!-- Fila de métricas visuales clave -->
             <div class="metrics-row" id="stockKpiMetrics">
               <div class="metric-box">
-                <span class="metric-label">Stock Total</span>
+                <span class="metric-label">Stock en Depósito</span>
                 <span class="metric-val" id="metricTotalStock">0</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-label">Total Semana</span>
+                <span class="metric-val" id="metricTotalWeek">0</span>
               </div>
               <div class="metric-box">
                 <span class="metric-label">Requerido Hoy</span>
@@ -262,22 +259,22 @@
                 <span class="metric-val" id="metricReqTomorrow">0</span>
               </div>
               <div class="metric-box" id="metricShortagesCard">
-                <span class="metric-label">Faltantes</span>
+                <span class="metric-label">Faltantes Semana</span>
                 <span class="metric-val" id="metricShortagesCount">0</span>
               </div>
             </div>
 
-            <!-- Tabla principal de Stock -->
+            <!-- Tabla principal de Stock General -->
             <div class="table-responsive">
               <table class="clean-table stock-table">
                 <thead>
                   <tr>
                     <th>Tipo de Pan</th>
-                    <th>Stock Disponible</th>
+                    <th>Stock Inicial</th>
+                    <th>Total Requerido Semana</th>
                     <th>Requerido Hoy</th>
                     <th>Requerido Mañana</th>
-                    <th id="thSelectedDayReq" style="display: none;">Requerido Seleccionado</th>
-                    <th id="thStockRemaining">Stock Restante</th>
+                    <th id="thStockRemaining">Saldo Final Semana</th>
                   </tr>
                 </thead>
                 <tbody id="stockTableBody">
@@ -295,17 +292,12 @@
                 Descontar Requerimiento de Hoy del Stock Real
               </button>
 
-              <button id="btnQuickAdjustStock" class="btn btn-primary btn-sm">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Actualizar / Cargar Stock
-              </button>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">
+                El Saldo Final proyecta el sobrante o faltante de panes al completar la producción de toda la semana.
+              </span>
             </div>
 
           </div>
-
         </div>
 
       </div>
@@ -813,7 +805,7 @@
         <div>
           <h3 id="modalPasteExcelTitle">Pegar Planilla de Productos</h3>
           <p id="modalPasteExcelSubtitle" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-            Copia filas de tu Excel y el sistema cruzará automáticamente las descripciones con el catálogo.
+            Copia filas de tu Excel y el sistema cruzará las descripciones con el catálogo mediante coincidencia exacta.
           </p>
         </div>
         <button class="btn-icon-only modal-close-btn" data-close="modalPasteExcel" aria-label="Cerrar">
@@ -831,8 +823,12 @@
           <div class="form-group">
             <label for="pasteColOrderSelect">Estructura de las columnas:</label>
             <select id="pasteColOrderSelect" class="form-control" style="font-size: 0.85rem;">
-              <option value="qty_prod">Col. 1: Cantidad | Col. 2: Descripción (Estándar)</option>
-              <option value="prod_qty">Col. 1: Descripción | Col. 2: Cantidad (Invertido)</option>
+              <option value="auto">✨ Auto-detectar columnas inteligente (Recomendado)</option>
+              <option value="prod_qty">Col. 1: Producto / Detalle | Col. 2: Cantidad</option>
+              <option value="qty_prod">Col. 1: Cantidad | Col. 2: Producto / Detalle</option>
+              <option value="code_prod_qty">Col. 1: Código | Col. 2: Producto | Col. 3: Cantidad</option>
+              <option value="qty_code_prod">Col. 1: Cantidad | Col. 2: Código | Col. 3: Producto</option>
+              <option value="code_qty">Col. 1: Código | Col. 2: Cantidad</option>
             </select>
           </div>
 
@@ -848,11 +844,11 @@
         <!-- Área de pegado -->
         <div class="form-group">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label for="pasteExcelTextarea">Pega aquí el contenido copiado (Ctrl + V):</label>
+            <label for="pasteExcelTextarea">Pega aquí el contenido copiado de Excel (Ctrl + V):</label>
             <button type="button" id="btnClearPasteText" class="btn-link" style="font-size: 0.75rem;">Limpiar texto</button>
           </div>
-          <textarea id="pasteExcelTextarea" class="form-control" rows="5" placeholder="Haz clic aquí y presiona Ctrl + V para pegar celdas copiadas de Excel...&#10;&#10;Ejemplo:&#10;25	COMBO SANDW. MC TASTY FOOD&#10;15	MILA BOX&#10;20	Pbt JQ (X2) (11660)"></textarea>
-          <span class="form-hint">Acepta automáticamente celdas de Excel, Google Sheets o texto separado por tabulaciones, comas o puntos y coma.</span>
+          <textarea id="pasteExcelTextarea" class="form-control" rows="5" placeholder="Haz clic aquí y presiona Ctrl + V para pegar celdas copiadas de Excel...&#10;&#10;Ejemplos compatibles:&#10;BAGEL JQ x 1 (TERMOSELLADO)	15&#10;10	Combo Sandw. Big Max Food&#10;22653	BAGEL JQ x 1	20&#10;22280	35"></textarea>
+          <span class="form-hint">Detecta automáticamente códigos, nombres y cantidades copiados de Excel o Google Sheets. Si alguna fila no coincide de inmediato, podrás asignarle el producto manualmente con un clic en la tabla inferior.</span>
         </div>
 
         <!-- Barra de resumen de análisis en vivo -->
@@ -869,19 +865,19 @@
               <line x1="12" y1="8" x2="12" y2="12"/>
               <line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
-            <span id="pasteUnmatchedCount">0</span> No encontrados (se omitirán)
+            <span id="pasteUnmatchedCount">0</span> Pendientes de asignación
           </div>
         </div>
 
         <!-- Tabla de Vista Previa en tiempo real -->
-        <div id="pastePreviewContainer" style="display: none; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div id="pastePreviewContainer" style="display: none; max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
           <table class="clean-table" style="font-size: 0.8rem;">
             <thead>
               <tr>
                 <th style="width: 50px;">Cant.</th>
-                <th>Texto Detectado (Columna 2)</th>
-                <th>Producto Reconocido en Catálogo</th>
-                <th style="width: 110px; text-align: right;">Estado</th>
+                <th>Texto Original en Excel</th>
+                <th>Producto Asignado en Catálogo</th>
+                <th style="width: 120px; text-align: right;">Estado</th>
               </tr>
             </thead>
             <tbody id="pastePreviewTableBody">

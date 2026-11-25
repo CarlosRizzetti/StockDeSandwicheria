@@ -97,33 +97,84 @@ class StockCalculator {
   }
 
   /**
-   * Genera el resumen comparativo completo de stock para el panel derecho
-   * @param {string} selectedDayKey - Día que se está inspeccionando detalladamente (por defecto, hoy)
+   * Calcula la evolución del stock día a día a lo largo de la semana en tiempo real.
+   * Si en un día se cargan productos, se descuenta de forma acumulativa para los días siguientes.
    */
-  getDetailedStockReport(selectedDayKey = null) {
+  calculateWeeklyProgression() {
+    const breadTypes = this.store.getBreadTypes();
+    const progression = {};
+    
+    // Inicializar inventario corriendo con el stock físico disponible
+    const runningStock = {};
+    breadTypes.forEach(b => {
+      runningStock[b.id] = b.stock;
+    });
+
+    DAYS_CONFIG.forEach(d => {
+      const dayReqs = this.calculateDayRequirements(d.key);
+      const dayBreads = [];
+      let totalBreadsNeeded = 0;
+      let dayShortages = 0;
+
+      breadTypes.forEach(b => {
+        const req = dayReqs[b.id]?.requiredQty || 0;
+        const startStock = runningStock[b.id];
+        const remaining = startStock - req;
+        const isShortage = remaining < 0;
+
+        totalBreadsNeeded += req;
+        if (isShortage && req > 0) dayShortages++;
+
+        dayBreads.push({
+          breadId: b.id,
+          name: b.name,
+          startStock: startStock,
+          required: req,
+          remainingStock: remaining,
+          isShortage: isShortage,
+          shortageAmount: isShortage ? Math.abs(remaining) : 0,
+          breakdown: dayReqs[b.id]?.breakdown || []
+        });
+
+        // Descontar para los días siguientes en tiempo real
+        runningStock[b.id] = remaining;
+      });
+
+      progression[d.key] = {
+        dayKey: d.key,
+        dayName: d.name,
+        totalBreadsNeeded,
+        shortagesCount: dayShortages,
+        breads: dayBreads
+      };
+    });
+
+    return {
+      byDay: progression,
+      finalStock: runningStock
+    };
+  }
+
+  /**
+   * Genera el resumen comparativo completo de stock para el panel general al final de la semana
+   */
+  getDetailedStockReport() {
     const todayKey = this.getTodayKey();
     const tomorrowKey = this.getNextDayKey(todayKey);
-    const focusDayKey = selectedDayKey || todayKey;
 
     const todayReqs = this.calculateDayRequirements(todayKey);
     const tomorrowReqs = this.calculateDayRequirements(tomorrowKey);
-    const focusReqs = focusDayKey !== todayKey && focusDayKey !== tomorrowKey 
-      ? this.calculateDayRequirements(focusDayKey) 
-      : null;
+    const weeklySummary = this.getWeeklySummary();
 
     const breadTypes = this.store.getBreadTypes();
 
     const report = breadTypes.map(bread => {
       const reqToday = todayReqs[bread.id]?.requiredQty || 0;
       const reqTomorrow = tomorrowReqs[bread.id]?.requiredQty || 0;
-      const reqSelected = focusReqs ? (focusReqs[bread.id]?.requiredQty || 0) : null;
-
-      // El stock restante por defecto se calcula contra el día seleccionado o hoy
-      const referenceRequirement = reqSelected !== null ? reqSelected : reqToday;
-      const remainingStock = bread.stock - referenceRequirement;
-
-      // Calculamos también la proyección si se cubriera hoy + mañana
-      const remainingAfterTomorrow = bread.stock - (reqToday + reqTomorrow);
+      const weeklyItem = weeklySummary.find(w => w.breadId === bread.id);
+      const totalWeek = weeklyItem ? weeklyItem.totalWeeklyRequired : 0;
+      const finalRemaining = bread.stock - totalWeek;
+      const isShortage = finalRemaining < 0;
 
       return {
         breadId: bread.id,
@@ -131,19 +182,18 @@ class StockCalculator {
         stock: bread.stock,
         reqToday,
         reqTomorrow,
-        reqSelected,
-        remainingStock,
-        remainingAfterTomorrow,
-        isShortage: remainingStock < 0,
-        shortageAmount: remainingStock < 0 ? Math.abs(remainingStock) : 0,
+        totalWeek,
+        remainingStock: finalRemaining,
+        isShortage: isShortage,
+        shortageAmount: isShortage ? Math.abs(finalRemaining) : 0,
         breakdownToday: todayReqs[bread.id]?.breakdown || [],
-        breakdownTomorrow: tomorrowReqs[bread.id]?.breakdown || [],
-        breakdownSelected: focusReqs ? (focusReqs[bread.id]?.breakdown || []) : []
+        breakdownTomorrow: tomorrowReqs[bread.id]?.breakdown || []
       };
     });
 
     // Métricas globales
     const totalStock = report.reduce((acc, r) => acc + r.stock, 0);
+    const totalWeek = report.reduce((acc, r) => acc + r.totalWeek, 0);
     const totalReqToday = report.reduce((acc, r) => acc + r.reqToday, 0);
     const totalReqTomorrow = report.reduce((acc, r) => acc + r.reqTomorrow, 0);
     const shortagesCount = report.filter(r => r.isShortage).length;
@@ -151,10 +201,10 @@ class StockCalculator {
     return {
       todayKey,
       tomorrowKey,
-      focusDayKey,
       items: report,
       summary: {
         totalStock,
+        totalWeek,
         totalReqToday,
         totalReqTomorrow,
         shortagesCount

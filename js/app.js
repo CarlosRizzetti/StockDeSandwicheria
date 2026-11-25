@@ -21,6 +21,7 @@ const App = {
     
     // Estado del modal de pegar desde Excel
     pastingToDay: null,
+    currentParsedRows: [],
     
     // Estado de edición de receta
     editingProductId: null,
@@ -81,6 +82,8 @@ const App = {
     // Columna izquierda (Planificación)
     this.dayFilterTabs = document.getElementById('dayFilterTabs');
     this.daysCardsContainer = document.getElementById('daysCardsContainer');
+    this.globalStockSummarySection = document.getElementById('globalStockSummarySection');
+    this.btnFilterJumpSummary = document.getElementById('btnFilterJumpSummary');
 
     // Columna derecha (Stock)
     this.stockConsultDaySelect = document.getElementById('stockConsultDaySelect');
@@ -88,6 +91,7 @@ const App = {
     this.thSelectedDayReq = document.getElementById('thSelectedDayReq');
     this.thStockRemaining = document.getElementById('thStockRemaining');
     this.metricTotalStock = document.getElementById('metricTotalStock');
+    this.metricTotalWeek = document.getElementById('metricTotalWeek');
     this.metricReqToday = document.getElementById('metricReqToday');
     this.metricReqTomorrow = document.getElementById('metricReqTomorrow');
     this.metricShortagesCount = document.getElementById('metricShortagesCount');
@@ -199,17 +203,28 @@ const App = {
     this.dayFilterTabs.addEventListener('click', (e) => {
       const chip = e.target.closest('.filter-chip');
       if (!chip) return;
+      const filter = chip.getAttribute('data-filter');
+
+      if (filter === 'resumen') {
+        if (this.globalStockSummarySection) {
+          this.globalStockSummarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return;
+      }
+
       this.dayFilterTabs.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
-      this.state.activeDayFilter = chip.getAttribute('data-filter');
+      this.state.activeDayFilter = filter;
       this.renderDayCards();
     });
 
-    // Selector de día en el Panel de Stock
-    this.stockConsultDaySelect.addEventListener('change', (e) => {
-      this.state.selectedConsultDay = e.target.value;
-      this.renderStockPanel();
-    });
+    // Selector de día en el Panel de Stock (si existe)
+    if (this.stockConsultDaySelect) {
+      this.stockConsultDaySelect.addEventListener('change', (e) => {
+        this.state.selectedConsultDay = e.target.value;
+        this.renderStockPanel();
+      });
+    }
 
     // Descontar Requerimiento de Hoy
     this.btnDeductDayStock.addEventListener('click', () => this.handleDeductTodayStock());
@@ -480,12 +495,15 @@ const App = {
   },
 
   // ====================================================
-  // COLUMNA IZQUIERDA: 7 TABLAS DE DÍAS DE LA SEMANA
+  // LISTADO DE DÍAS: PRODUCTOS + STOCK EN TIEMPO REAL
   // ====================================================
   renderDayCards() {
     const todayKey = window.stockCalculator.getTodayKey();
     const tomorrowKey = window.stockCalculator.getNextDayKey(todayKey);
     const filter = this.state.activeDayFilter;
+
+    // Calcular la evolución progresiva acumulada de la semana en tiempo real
+    const weeklyProg = window.stockCalculator.calculateWeeklyProgression();
 
     let html = '';
 
@@ -500,6 +518,8 @@ const App = {
       const isPrintActive = !!this.state.printSelected[day.key];
       const dayPlan = window.appStore.getDayPlan(day.key);
       const totalUnits = dayPlan.reduce((acc, item) => acc + (item.qty || 0), 0);
+      const dayProg = weeklyProg.byDay[day.key] || { breads: [], shortagesCount: 0, totalBreadsNeeded: 0 };
+      const dayActiveBreads = dayProg.breads.filter(b => b.required > 0);
 
       html += `
         <div class="day-card ${isToday ? 'is-today' : ''} ${isPrintActive ? 'print-active' : ''}" id="dayCard_${day.key}">
@@ -545,77 +565,158 @@ const App = {
             </div>
           </div>
 
-          <div class="table-responsive">
-            ${dayPlan.length === 0 ? `
-              <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <p>No hay productos planificados para el ${day.name}.</p>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
-                  <button class="btn btn-outline btn-sm btn-add-day-prod" data-day="${day.key}">
-                    + Agregar manual
-                  </button>
-                  <button class="btn btn-primary btn-sm btn-paste-day-table" data-day="${day.key}">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-                    </svg>
-                    Pegar desde Excel
-                  </button>
-                </div>
+          <div class="day-card-split-body">
+            
+            <!-- SUBPANEL IZQUIERDO: PRODUCTOS PLANIFICADOS -->
+            <div class="day-products-panel">
+              <div class="day-panel-subheading">
+                <span>🥪 Productos a Elaborar</span>
+                <span class="day-sub-count">${dayPlan.length} productos / ${totalUnits} un.</span>
               </div>
-            ` : `
-              <table class="clean-table">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th style="width: 170px;">Cantidad</th>
-                    <th style="text-align: right; width: 80px;">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${dayPlan.map(item => {
-                    const product = window.appStore.getProductById(item.productId);
-                    const prodName = product ? product.name : 'Producto no encontrado';
-                    const recipeSummary = product ? window.stockCalculator.getProductRecipeSummary(product) : '';
 
-                    return `
+              <div class="table-responsive">
+                ${dayPlan.length === 0 ? `
+                  <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <p>No hay productos cargados para el ${day.name}.</p>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
+                      <button class="btn btn-outline btn-sm btn-add-day-prod" data-day="${day.key}">
+                        + Agregar manual
+                      </button>
+                      <button class="btn btn-primary btn-sm btn-paste-day-table" data-day="${day.key}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        </svg>
+                        Pegar desde Excel
+                      </button>
+                    </div>
+                  </div>
+                ` : `
+                  <table class="clean-table">
+                    <thead>
                       <tr>
-                        <td>
-                          <div class="prod-name-cell">${this.escapeHtml(prodName)}</div>
-                          <div class="prod-recipe-hint">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <circle cx="12" cy="12" r="10"/>
-                              <path d="M12 6v6l4 2"/>
-                            </svg>
-                            ${this.escapeHtml(recipeSummary)}
-                          </div>
-                        </td>
-                        <td>
-                          <div class="qty-stepper">
-                            <button type="button" class="qty-btn btn-qty-step" data-day="${day.key}" data-prod="${item.productId}" data-step="-1">−</button>
-                            <input type="number" min="1" class="qty-input day-qty-input" data-day="${day.key}" data-prod="${item.productId}" value="${item.qty}">
-                            <button type="button" class="qty-btn btn-qty-step" data-day="${day.key}" data-prod="${item.productId}" data-step="1">+</button>
-                          </div>
-                        </td>
-                        <td style="text-align: right;">
-                          <button class="btn-icon-only danger btn-delete-day-item" data-day="${day.key}" data-prod="${item.productId}" title="Eliminar producto de este día">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <polyline points="3 6 5 6 21 6"/>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                          </button>
+                        <th>Producto</th>
+                        <th style="width: 150px;">Cantidad</th>
+                        <th style="text-align: right; width: 60px;">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${dayPlan.map(item => {
+                        const product = window.appStore.getProductById(item.productId);
+                        const prodName = product ? product.name : 'Producto no encontrado';
+                        const recipeSummary = product ? window.stockCalculator.getProductRecipeSummary(product) : '';
+
+                        return `
+                          <tr>
+                            <td>
+                              <div class="prod-name-cell">${this.escapeHtml(prodName)}</div>
+                              <div class="prod-recipe-hint">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <path d="M12 6v6l4 2"/>
+                                </svg>
+                                ${this.escapeHtml(recipeSummary)}
+                              </div>
+                            </td>
+                            <td>
+                              <div class="qty-stepper">
+                                <button type="button" class="qty-btn btn-qty-step" data-day="${day.key}" data-prod="${item.productId}" data-step="-1">−</button>
+                                <input type="number" min="1" class="qty-input day-qty-input" data-day="${day.key}" data-prod="${item.productId}" value="${item.qty}">
+                                <button type="button" class="qty-btn btn-qty-step" data-day="${day.key}" data-prod="${item.productId}" data-step="1">+</button>
+                              </div>
+                            </td>
+                            <td style="text-align: right;">
+                              <button class="btn-icon-only danger btn-delete-day-item" data-day="${day.key}" data-prod="${item.productId}" title="Eliminar producto de este día">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <polyline points="3 6 5 6 21 6"/>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                `}
+              </div>
+            </div>
+
+            <!-- SUBPANEL DERECHO: REQUERIMIENTOS Y STOCK EN TIEMPO REAL -->
+            <div class="day-stock-panel">
+              <div class="day-panel-subheading">
+                <span>🥖 Panes Requeridos (${dayActiveBreads.length})</span>
+                ${dayActiveBreads.length === 0 ? `
+                  <span class="day-sub-count">Sin consumo</span>
+                ` : (dayProg.shortagesCount > 0 ? `
+                  <span class="badge-tag-danger">⚠️ Faltan ${dayProg.shortagesCount} tipos</span>
+                ` : `
+                  <span class="badge-tag-success">✓ Stock OK (${dayProg.totalBreadsNeeded} req.)</span>
+                `)}
+              </div>
+
+              <div class="table-responsive">
+                <table class="clean-table day-stock-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo de Pan</th>
+                      <th style="text-align: center;">Requerido</th>
+                      <th style="text-align: center;" title="Stock disponible al inicio de este día">Stock Disp.</th>
+                      <th style="text-align: right;" title="Stock restante tras descontar el consumo de este día">Stock Restante</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${dayActiveBreads.length === 0 ? `
+                      <tr>
+                        <td colspan="4" style="text-align: center; padding: 2.25rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+                          <div style="opacity: 0.45; font-size: 1.5rem; margin-bottom: 0.25rem;">🥖</div>
+                          No hay panes requeridos para el ${day.name}.
                         </td>
                       </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            `}
+                    ` : dayActiveBreads.map(b => `
+                      <tr class="${b.isShortage ? 'tr-shortage' : ''}">
+                        <td>
+                          <div class="bread-name-cell">
+                            <span class="bread-bullet"></span>
+                            <span title="${this.escapeHtml(b.name)}">${this.escapeHtml(b.name)}</span>
+                          </div>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="val-badge req-highlight" 
+                                style="cursor: pointer;" 
+                                title="Clic para ver productos que consumen este pan"
+                                onclick="App.showBreakdownModal('${b.breadId}', '${day.key}', '${day.name}')">
+                            ${b.required}
+                            <small style="font-size: 0.7rem; margin-left: 2px;">ℹ</small>
+                          </span>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="val-mini">${b.startStock}</span>
+                        </td>
+                        <td style="text-align: right;" class="stock-remaining-cell">
+                          ${b.isShortage ? `
+                            <span class="badge-status badge-shortage" title="Faltan ${b.shortageAmount} panes para cubrir la producción">
+                              FALTAN ${b.shortageAmount}
+                            </span>
+                          ` : `
+                            <span class="badge-status badge-ok" title="Stock restante suficiente">
+                              ${b.remainingStock}
+                            </span>
+                          `}
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -702,24 +803,16 @@ const App = {
   },
 
   // ====================================================
-  // COLUMNA DERECHA: PANEL DE CONTROL Y RESUMEN DE STOCK
+  // AL FINAL DE LOS DÍAS: PANEL GENERAL DE CONTROL Y RESUMEN DE STOCK
   // ====================================================
   renderStockPanel() {
-    const selectedFilter = this.state.selectedConsultDay;
-    const todayKey = window.stockCalculator.getTodayKey();
-    const tomorrowKey = window.stockCalculator.getNextDayKey(todayKey);
-
-    let focusDayKey = todayKey;
-    if (selectedFilter === 'manana') {
-      focusDayKey = tomorrowKey;
-    } else if (selectedFilter !== 'hoy') {
-      focusDayKey = selectedFilter; // 'lunes', 'martes', etc.
-    }
-
-    const report = window.stockCalculator.getDetailedStockReport(focusDayKey);
+    const report = window.stockCalculator.getDetailedStockReport();
 
     // Actualizar métricas KPI
     this.metricTotalStock.textContent = report.summary.totalStock;
+    if (this.metricTotalWeek) {
+      this.metricTotalWeek.textContent = report.summary.totalWeek;
+    }
     this.metricReqToday.textContent = report.summary.totalReqToday;
     this.metricReqTomorrow.textContent = report.summary.totalReqTomorrow;
     this.metricShortagesCount.textContent = report.summary.shortagesCount;
@@ -742,24 +835,11 @@ const App = {
       this.printStockCheckbox.checked = isStockPrintActive;
     }
 
-    // Configurar cabeceras según el filtro seleccionado
-    const focusDayInfo = window.stockCalculator.getDayInfo(focusDayKey);
-    const isCustomDay = selectedFilter !== 'hoy' && selectedFilter !== 'manana';
-
-    if (isCustomDay) {
-      this.thSelectedDayReq.style.display = '';
-      this.thSelectedDayReq.textContent = `Requerido ${focusDayInfo.name}`;
-      this.thStockRemaining.textContent = `Stock Restante (${focusDayInfo.name})`;
-    } else {
-      this.thSelectedDayReq.style.display = 'none';
-      this.thStockRemaining.textContent = selectedFilter === 'manana' ? 'Stock Restante (Mañana)' : 'Stock Restante';
-    }
-
-    // Renderizar filas de la tabla de stock
+    // Renderizar filas de la tabla de stock consolidada
     if (report.items.length === 0) {
       this.stockTableBody.innerHTML = `
         <tr>
-          <td colspan="${isCustomDay ? 6 : 5}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
             No hay tipos de panes cargados en el sistema.
           </td>
         </tr>
@@ -767,18 +847,12 @@ const App = {
       return;
     }
 
+    const todayKey = report.todayKey;
+    const tomorrowKey = report.tomorrowKey;
+
     let html = '';
     report.items.forEach(item => {
-      // Requerimiento que determina el stock restante
-      let reqToCompare = item.reqToday;
-      if (selectedFilter === 'manana') {
-        reqToCompare = item.reqTomorrow;
-      } else if (isCustomDay) {
-        reqToCompare = item.reqSelected || 0;
-      }
-
-      const remaining = item.stock - reqToCompare;
-      const isShortage = remaining < 0;
+      const isShortage = item.isShortage;
 
       html += `
         <tr class="${isShortage ? 'tr-shortage' : ''}">
@@ -797,6 +871,11 @@ const App = {
             </div>
           </td>
           <td>
+            <span class="val-badge ${item.totalWeek > 0 ? 'req-highlight' : 'req-zero'}">
+              ${item.totalWeek}
+            </span>
+          </td>
+          <td>
             <span class="val-badge" style="cursor: pointer;" title="Ver qué productos consumen este pan hoy" onclick="App.showBreakdownModal('${item.breadId}', '${todayKey}', 'Hoy')">
               ${item.reqToday}
               ${item.reqToday > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
@@ -808,14 +887,6 @@ const App = {
               ${item.reqTomorrow > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
             </span>
           </td>
-          ${isCustomDay ? `
-            <td>
-              <span class="val-badge" style="cursor: pointer;" onclick="App.showBreakdownModal('${item.breadId}', '${focusDayKey}', '${focusDayInfo.name}')">
-                ${reqToCompare}
-                ${reqToCompare > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
-              </span>
-            </td>
-          ` : ''}
           <td class="stock-remaining-cell">
             ${isShortage ? `
               <span class="badge-status badge-shortage">
@@ -824,14 +895,14 @@ const App = {
                   <line x1="12" y1="9" x2="12" y2="13"/>
                   <line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
-                FALTAN ${Math.abs(remaining)}
+                FALTAN ${item.shortageAmount}
               </span>
             ` : `
               <span class="badge-status badge-ok">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                Sobra +${remaining}
+                Sobra +${item.remainingStock}
               </span>
             `}
           </td>
@@ -875,7 +946,9 @@ const App = {
   filterDayProductSearchResults(query) {
     const cleanQuery = (query || '').toLowerCase().trim();
     const products = window.appStore.getProducts();
-    const filtered = products.filter(p => p.name.toLowerCase().includes(cleanQuery));
+    const filtered = products.filter(p => 
+      p.name.toLowerCase().includes(cleanQuery) || (p.code && p.code.toLowerCase().includes(cleanQuery))
+    );
 
     if (filtered.length === 0) {
       this.dayProductSearchResults.innerHTML = `
@@ -890,11 +963,12 @@ const App = {
     filtered.forEach(p => {
       const isSelected = this.state.selectedProductToAdd && this.state.selectedProductToAdd.id === p.id;
       const recipeSummary = window.stockCalculator.getProductRecipeSummary(p);
+      const codeBadge = p.code ? `<span style="display: inline-block; background-color: #f1f5f9; color: #475569; font-size: 0.72rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">#${p.code}</span>` : '';
 
       html += `
         <div class="search-result-item ${isSelected ? 'selected' : ''}" data-product-id="${p.id}">
           <div>
-            <div class="item-title">${this.escapeHtml(p.name)}</div>
+            <div class="item-title">${codeBadge}${this.escapeHtml(p.name)}</div>
             <div class="item-sub">${this.escapeHtml(recipeSummary)}</div>
           </div>
           <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">Seleccionar</span>
@@ -990,6 +1064,7 @@ const App = {
     const dayInfo = dayKey ? window.stockCalculator.getDayInfo(dayKey) : { name: 'Día' };
 
     if (!text || !text.trim()) {
+      this.state.currentParsedRows = [];
       this.pasteAnalysisSummaryBar.style.display = 'none';
       this.pastePreviewContainer.style.display = 'none';
       this.pastePreviewTableBody.innerHTML = '';
@@ -999,18 +1074,27 @@ const App = {
     }
 
     const result = this.parsePastedText(text);
+    this.state.currentParsedRows = result.rows;
+
+    this.renderPastePreviewRows(dayInfo);
+  },
+
+  renderPastePreviewRows(dayInfo) {
+    const rows = this.state.currentParsedRows || [];
+    const matchedCount = rows.filter(r => r.matched && r.product).length;
+    const unmatchedCount = rows.filter(r => !r.matched || !r.product).length;
 
     this.pasteAnalysisSummaryBar.style.display = 'flex';
-    this.pasteMatchedCount.textContent = result.matchedCount;
+    this.pasteMatchedCount.textContent = matchedCount;
 
-    if (result.unmatchedCount > 0) {
+    if (unmatchedCount > 0) {
       this.pasteUnmatchedBadge.style.display = 'inline-flex';
-      this.pasteUnmatchedCount.textContent = result.unmatchedCount;
+      this.pasteUnmatchedCount.textContent = `${unmatchedCount} pendientes`;
     } else {
       this.pasteUnmatchedBadge.style.display = 'none';
     }
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
       this.pastePreviewContainer.style.display = 'none';
       this.pastePreviewTableBody.innerHTML = '';
       this.btnConfirmImportPaste.disabled = true;
@@ -1020,29 +1104,54 @@ const App = {
 
     this.pastePreviewContainer.style.display = 'block';
 
+    const allProducts = window.appStore.getProducts();
+
     let html = '';
-    result.rows.forEach(r => {
+    rows.forEach((r, index) => {
       const recipeSummary = r.product ? window.stockCalculator.getProductRecipeSummary(r.product) : '';
 
       html += `
-        <tr style="${r.matched ? '' : 'opacity: 0.6; background-color: #f8fafc;'}">
-          <td style="font-weight: 700;">${r.qty}</td>
-          <td>
-            <div style="font-weight: 500;">${this.escapeHtml(r.rawDesc)}</div>
+        <tr style="${r.matched ? '' : 'background-color: #fff9f0;'}">
+          <td style="font-weight: 700; width: 60px; vertical-align: middle;">
+            <input type="number" min="1" class="form-control form-control-sm paste-row-qty-input" 
+              data-row-index="${index}" value="${r.qty}" style="padding: 2px 4px; font-size: 0.8rem; width: 55px; text-align: center;">
           </td>
-          <td>
+          <td style="vertical-align: middle;">
+            <div style="font-weight: 500; font-size: 0.82rem; word-break: break-word;">${this.escapeHtml(r.rawDesc)}</div>
+          </td>
+          <td style="vertical-align: middle;">
             ${r.matched ? `
-              <strong style="color: var(--text-main);">${this.escapeHtml(r.product.name)}</strong>
-              <div style="font-size: 0.72rem; color: var(--text-muted);">${this.escapeHtml(recipeSummary)}</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div>
+                  <strong style="color: var(--text-main); font-size: 0.85rem;">
+                    ${r.product.code ? `<span class="product-code-badge" style="margin-right: 4px;">#${this.escapeHtml(r.product.code)}</span>` : ''}
+                    ${this.escapeHtml(r.product.name)}
+                  </strong>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">${this.escapeHtml(recipeSummary)}</div>
+                </div>
+                <button type="button" class="btn-link btn-change-row-product" data-row-index="${index}" style="font-size: 0.72rem; color: var(--primary); text-decoration: underline; cursor: pointer; white-space: nowrap;">
+                  Cambiar
+                </button>
+              </div>
             ` : `
-              <span style="color: var(--text-subtle); font-style: italic;">No encontrado en catálogo</span>
+              <div>
+                <select class="form-control form-control-sm select-manual-match" data-row-index="${index}" style="font-size: 0.78rem; border-color: #f59e0b; background-color: #fffbeb;">
+                  <option value="">⚠️ Asignar producto del catálogo...</option>
+                  ${allProducts.map(p => `
+                    <option value="${p.id}" ${r.manualSelectedId === p.id ? 'selected' : ''}>
+                      ${p.code ? `[${p.code}] ` : ''}${this.escapeHtml(p.name)}
+                    </option>
+                  `).join('')}
+                </select>
+                <div style="font-size: 0.7rem; color: #b45309; margin-top: 2px;">Selecciona el producto si deseas incluirlo</div>
+              </div>
             `}
           </td>
-          <td style="text-align: right;">
+          <td style="text-align: right; vertical-align: middle;">
             ${r.matched ? `
-              <span class="badge-tag-matched">✓ Coincide</span>
+              <span class="badge-tag-matched" style="font-size: 0.72rem;">✓ Listo</span>
             ` : `
-              <span class="badge-tag-unmatched">Omitir</span>
+              <span class="badge-tag-unmatched" style="font-size: 0.72rem;">Pendiente</span>
             `}
           </td>
         </tr>
@@ -1051,83 +1160,165 @@ const App = {
 
     this.pastePreviewTableBody.innerHTML = html;
 
-    if (result.matchedCount > 0) {
+    // Vincular cambios manuales en el dropdown de selección de producto
+    this.pastePreviewTableBody.querySelectorAll('.select-manual-match').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const rowIndex = parseInt(e.target.getAttribute('data-row-index'), 10);
+        const selectedId = e.target.value;
+        if (this.state.currentParsedRows[rowIndex]) {
+          if (selectedId) {
+            const product = window.appStore.getProductById(selectedId);
+            this.state.currentParsedRows[rowIndex].product = product;
+            this.state.currentParsedRows[rowIndex].matched = true;
+            this.state.currentParsedRows[rowIndex].manualSelectedId = selectedId;
+          } else {
+            this.state.currentParsedRows[rowIndex].product = null;
+            this.state.currentParsedRows[rowIndex].matched = false;
+            this.state.currentParsedRows[rowIndex].manualSelectedId = null;
+          }
+          this.renderPastePreviewRows(dayInfo);
+        }
+      });
+    });
+
+    // Botón para cambiar producto ya asignado
+    this.pastePreviewTableBody.querySelectorAll('.btn-change-row-product').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rowIndex = parseInt(btn.getAttribute('data-row-index'), 10);
+        if (this.state.currentParsedRows[rowIndex]) {
+          this.state.currentParsedRows[rowIndex].product = null;
+          this.state.currentParsedRows[rowIndex].matched = false;
+          this.renderPastePreviewRows(dayInfo);
+        }
+      });
+    });
+
+    // Inputs de cantidad en la vista previa
+    this.pastePreviewTableBody.querySelectorAll('.paste-row-qty-input').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const rowIndex = parseInt(e.target.getAttribute('data-row-index'), 10);
+        const val = parseInt(e.target.value, 10);
+        if (this.state.currentParsedRows[rowIndex] && val > 0) {
+          this.state.currentParsedRows[rowIndex].qty = val;
+        }
+      });
+    });
+
+    if (matchedCount > 0) {
       this.btnConfirmImportPaste.disabled = false;
-      this.btnConfirmImportPasteText.textContent = `Cargar ${result.matchedCount} Producto(s) al ${dayInfo.name}`;
+      this.btnConfirmImportPasteText.textContent = `Cargar ${matchedCount} Producto(s) al ${dayInfo.name}`;
     } else {
       this.btnConfirmImportPaste.disabled = true;
-      this.btnConfirmImportPasteText.textContent = `Sin coincidencias para cargar`;
+      this.btnConfirmImportPasteText.textContent = `Sin productos seleccionados para cargar`;
     }
+  },
+
+  normalizeForMatch(text) {
+    if (!text) return '';
+    return text.toString()
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/^["']+|["']+$/g, '')      // comillas exteriores
+      .replace(/\u2026/g, '...')          // elipsis a tres puntos
+      .replace(/[¨´`^]/g, '')             // dieresis o acentos flotantes
+      .replace(/\u00A0/g, ' ')            // espacios no separables
+      .replace(/\s+/g, ' ')
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")    // acentos
+      .toLowerCase();
+  },
+
+  getBaseProductName(name) {
+    const norm = this.normalizeForMatch(name);
+    // Eliminar contenido entre paréntesis o corchetes
+    const base = norm.replace(/\([^\)]*\)/g, '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
+    return base;
+  },
+
+  standardizePunctuation(text) {
+    const norm = this.normalizeForMatch(text);
+    return norm
+      .replace(/\)\s*\(/g, ') (')
+      .replace(/\s*\(\s*/g, ' (')
+      .replace(/\s*\)\s*/g, ') ')
+      .replace(/\s*,\s*/g, ', ')
+      .replace(/\s*-\s*/g, ' - ')
+      .replace(/\.{2,}/g, '.')
+      .replace(/\s+/g, ' ')
+      .trim();
   },
 
   findProductMatch(rawText) {
     if (!rawText) return null;
-    const clean = rawText.trim();
-    if (!clean) return null;
+    const cleanRaw = (rawText.toString() || '').trim().replace(/^["']+|["']+$/g, '').trim();
+    if (!cleanRaw) return null;
 
     const products = window.appStore.getProducts();
+    const norm = this.normalizeForMatch(cleanRaw);
+    if (!norm) return null;
 
-    // 1. Coincidencia exacta (case insensitive)
-    const exact = products.find(p => p.name.toLowerCase() === clean.toLowerCase());
-    if (exact) return exact;
-
-    // Normalizador de texto
-    const normalize = (str) => {
-      return (str || '')
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // sin acentos
-        .replace(/^[.\s\-_]+/, "")        // quitar puntos iniciales (ej: ".Armado...")
-        .replace(/[^a-z0-9]/g, " ")       // solo alfanumérico
-        .replace(/\s+/g, " ")             // espacios simples
-        .trim();
-    };
-
-    const normQuery = normalize(clean);
-    if (!normQuery) return null;
-
-    // 2. Coincidencia normalizada exacta
-    const normMatch = products.find(p => normalize(p.name) === normQuery);
-    if (normMatch) return normMatch;
-
-    // 3. Coincidencia por código de producto (4 a 6 dígitos: ej 11660, 22541, 22569, etc.)
-    const codes = clean.match(/\b\d{4,6}\b/g);
-    if (codes && codes.length > 0) {
-      for (const code of codes) {
-        const codeMatches = products.filter(p => p.name.includes(code));
-        if (codeMatches.length === 1) {
-          return codeMatches[0];
-        }
-      }
+    // 1. Coincidencia directa por código numérico (ej: "22653")
+    if (/^\d{3,6}$/.test(cleanRaw)) {
+      const byCode = products.find(p => p.code === cleanRaw);
+      if (byCode) return byCode;
     }
 
-    // 4. Inclusión o Substring directo
-    const subMatches = products.filter(p => {
-      const pNorm = normalize(p.name);
-      return pNorm.includes(normQuery) || normQuery.includes(pNorm);
-    });
-    if (subMatches.length === 1) {
-      return subMatches[0];
+    // 2. Coincidencia exacta de nombre completo normalizado
+    const byExactName = products.find(p => this.normalizeForMatch(p.name) === norm);
+    if (byExactName) return byExactName;
+
+    // 3. Coincidencia con puntuación y paréntesis estandarizados
+    const stdPunct = this.standardizePunctuation(cleanRaw);
+    const byStdPunct = products.find(p => this.standardizePunctuation(p.name) === stdPunct);
+    if (byStdPunct) return byStdPunct;
+
+    // 4. Código numérico en prefijo ("22653 - Nombre" o "22653 Nombre" o "[22653] Nombre")
+    const prefixMatch = cleanRaw.match(/^(?:\[|\()?(\d{3,6})(?:\]|\))?[\s\-_:]+(.+)$/);
+    if (prefixMatch) {
+      const code = prefixMatch[1];
+      const descNorm = this.normalizeForMatch(prefixMatch[2]);
+      const byCode = products.find(p => p.code === code);
+      if (byCode) return byCode;
+      const byDesc = products.find(p => this.normalizeForMatch(p.name) === descNorm);
+      if (byDesc) return byDesc;
     }
 
-    // 5. Coincidencia de tokens/palabras clave
-    const queryWords = normQuery.split(" ").filter(w => w.length > 2);
-    if (queryWords.length > 0) {
-      let bestProd = null;
-      let maxMatchedWords = 0;
+    // 5. Código numérico en sufijo ("Nombre (22653)" o "Nombre 22653")
+    const suffixMatch = cleanRaw.match(/^(.+?)[\s\-_:\(]+(\d{3,6})\)?$/);
+    if (suffixMatch) {
+      const code = suffixMatch[2];
+      const byCode = products.find(p => p.code === code);
+      if (byCode) return byCode;
+    }
 
-      products.forEach(p => {
-        const pWords = normalize(p.name).split(" ").filter(w => w.length > 2);
-        const matches = queryWords.filter(qw => pWords.includes(qw)).length;
-        if (matches > maxMatchedWords && matches >= Math.min(2, queryWords.length)) {
-          maxMatchedWords = matches;
-          bestProd = p;
-        }
+    // 6. Coincidencia por Nombre Base (sin especificaciones en paréntesis de ingredientes/empaque)
+    const queryBase = this.getBaseProductName(cleanRaw);
+    if (queryBase.length >= 4) {
+      const byBaseExact = products.find(p => this.getBaseProductName(p.name) === queryBase);
+      if (byBaseExact) return byBaseExact;
+
+      const byPrefix = products.find(p => {
+        const prodBase = this.getBaseProductName(p.name);
+        return (prodBase && prodBase.startsWith(queryBase)) || 
+               (this.normalizeForMatch(p.name).startsWith(queryBase));
       });
+      if (byPrefix) return byPrefix;
+    }
 
-      if (bestProd && maxMatchedWords >= Math.ceil(queryWords.length * 0.5)) {
-        return bestProd;
-      }
+    // 7. Coincidencia ignorando punto o guión inicial (ej: ".Armado del sandwich..." o "- Mila box")
+    const normNoLead = norm.replace(/^[.\s\-_]+/, '');
+    if (normNoLead && normNoLead !== norm) {
+      const byNoLead = products.find(p => this.normalizeForMatch(p.name).replace(/^[.\s\-_]+/, '') === normNoLead);
+      if (byNoLead) return byNoLead;
+    }
+
+    // 8. Tolerancia a "Armado del sandwich X" vs "Combo Sandw. X"
+    const armadoMatch = norm.match(/^(?:\.armado del sandwich|armado del sandwich)\s+(.+)$/);
+    if (armadoMatch) {
+      const sub = armadoMatch[1].trim();
+      const byArmado = products.find(p => this.normalizeForMatch(p.name).includes(sub));
+      if (byArmado) return byArmado;
     }
 
     return null;
@@ -1139,74 +1330,168 @@ const App = {
     }
 
     const lines = text.split(/\r?\n/);
-    const order = this.pasteColOrderSelect.value; // 'qty_prod' o 'prod_qty'
+    const mode = this.pasteColOrderSelect ? this.pasteColOrderSelect.value : 'auto';
     const parsedRows = [];
     let matchedCount = 0;
     let unmatchedCount = 0;
+
+    const headerKeywords = ['producto', 'articulo', 'artículo', 'codigo', 'código', 'cant', 'cantidad', 'item', 'detalle', 'descripcion', 'descripción', 'pan'];
 
     lines.forEach((line, index) => {
       const trimmed = line.trim();
       if (!trimmed) return;
 
-      // Separadores: Tabulador, Punto y coma, Coma, o dos o más espacios
-      let parts = trimmed.split('\t');
-      if (parts.length < 2) parts = trimmed.split(';');
-      if (parts.length < 2) parts = trimmed.split('  ');
-      if (parts.length < 2) parts = trimmed.split(',');
+      // Detectar si la fila es un encabezado
+      const lower = trimmed.toLowerCase();
+      const isHeader = headerKeywords.some(kw => {
+        const re = new RegExp(`(^|[\\t;,\\s])${kw}([\\t;,\\s]|$)`, 'i');
+        return re.test(lower);
+      });
+      if (isHeader && !this.findProductMatch(trimmed)) {
+        return; // Omitir encabezados como "Cantidad \t Producto"
+      }
 
-      if (parts.length < 2) {
-        // Si no hay separador, intentar regex si empieza con un número: ej "15 Hamburguesa"
-        const numMatch = trimmed.match(/^(\d+)\s+(.+)$/);
-        if (numMatch) {
-          parts = [numMatch[1], numMatch[2]];
-        } else {
-          return; // no interpretable como 2 columnas
+      // Separadores: Tabulador, Punto y coma, 2 o más espacios, o Coma fuera de comillas
+      let rawCells = trimmed.split('\t');
+      if (rawCells.length < 2) rawCells = trimmed.split(';');
+      if (rawCells.length < 2) rawCells = trimmed.split(/\s{2,}/);
+      if (rawCells.length < 2) rawCells = trimmed.split(',');
+
+      // Limpiar comillas exteriores que pone Excel en cada celda
+      const cleanCells = rawCells
+        .map(c => (c || '').replace(/^["']+|["']+$/g, '').trim())
+        .filter(c => c.length > 0);
+
+      if (cleanCells.length === 0) return;
+
+      let matchedProduct = null;
+      let qty = 0;
+      let rawDesc = '';
+      let productCellIndex = -1;
+
+      if (mode === 'qty_prod' && cleanCells.length >= 2) {
+        // Col 1: Cantidad | Col 2: Producto
+        rawDesc = cleanCells[1];
+        matchedProduct = this.findProductMatch(rawDesc);
+        qty = parseInt(cleanCells[0].replace(/[^\d]/g, ''), 10) || 0;
+        productCellIndex = 1;
+      } else if (mode === 'prod_qty' && cleanCells.length >= 2) {
+        // Col 1: Producto | Col 2: Cantidad
+        rawDesc = cleanCells[0];
+        matchedProduct = this.findProductMatch(rawDesc);
+        qty = parseInt(cleanCells[1].replace(/[^\d]/g, ''), 10) || 0;
+        productCellIndex = 0;
+      } else if (mode === 'code_prod_qty' && cleanCells.length >= 3) {
+        // Col 1: Código | Col 2: Producto | Col 3: Cantidad
+        rawDesc = cleanCells[1];
+        matchedProduct = this.findProductMatch(cleanCells[0]) || this.findProductMatch(rawDesc);
+        qty = parseInt(cleanCells[2].replace(/[^\d]/g, ''), 10) || 0;
+        productCellIndex = 1;
+      } else if (mode === 'qty_code_prod' && cleanCells.length >= 3) {
+        // Col 1: Cantidad | Col 2: Código | Col 3: Producto
+        rawDesc = cleanCells[2];
+        matchedProduct = this.findProductMatch(cleanCells[1]) || this.findProductMatch(rawDesc);
+        qty = parseInt(cleanCells[0].replace(/[^\d]/g, ''), 10) || 0;
+        productCellIndex = 2;
+      } else if (mode === 'code_qty' && cleanCells.length >= 2) {
+        // Col 1: Código | Col 2: Cantidad
+        rawDesc = cleanCells[0];
+        matchedProduct = this.findProductMatch(cleanCells[0]);
+        qty = parseInt(cleanCells[1].replace(/[^\d]/g, ''), 10) || 0;
+        productCellIndex = 0;
+      } else {
+        // MODO AUTO-DETECTAR INTELIGENTE (Por defecto)
+        // 1. Escanear cada celda para ver si alguna coincide con un producto (código o nombre)
+        for (let i = 0; i < cleanCells.length; i++) {
+          const match = this.findProductMatch(cleanCells[i]);
+          if (match) {
+            matchedProduct = match;
+            productCellIndex = i;
+            rawDesc = cleanCells[i];
+            break;
+          }
+        }
+
+        // 2. Si no coincide individualmente, probar pares contiguos (ej: si código está en celda 0 y nombre en celda 1)
+        if (!matchedProduct && cleanCells.length >= 2) {
+          for (let i = 0; i < cleanCells.length - 1; i++) {
+            const joined = `${cleanCells[i]} ${cleanCells[i + 1]}`;
+            const match = this.findProductMatch(joined);
+            if (match) {
+              matchedProduct = match;
+              productCellIndex = i;
+              rawDesc = joined;
+              break;
+            }
+          }
+        }
+
+        // 3. Determinar la cantidad buscando números enteros en las celdas restantes
+        if (cleanCells.length >= 2) {
+          for (let i = 0; i < cleanCells.length; i++) {
+            if (i === productCellIndex) continue;
+            const cellTxt = cleanCells[i];
+            if (matchedProduct && matchedProduct.code === cellTxt) continue;
+            const numMatch = cellTxt.match(/^\s*(\d+)\s*(?:u|un|unid|unidades)?\s*$/i);
+            if (numMatch) {
+              const val = parseInt(numMatch[1], 10);
+              if (val > 0) {
+                qty = val;
+                break;
+              }
+            }
+          }
+
+          if (qty === 0) {
+            for (let i = 0; i < cleanCells.length; i++) {
+              if (i === productCellIndex) continue;
+              const cellTxt = cleanCells[i];
+              if (matchedProduct && matchedProduct.code === cellTxt) continue;
+              const digits = cellTxt.replace(/[^\d]/g, '');
+              if (digits.length > 0 && digits.length <= 4) {
+                const val = parseInt(digits, 10);
+                if (val > 0) {
+                  qty = val;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (qty === 0) {
+          const startNum = trimmed.match(/^(\d+)\s+(.+)$/);
+          if (startNum && matchedProduct) {
+            qty = parseInt(startNum[1], 10) || 1;
+          } else {
+            qty = 1;
+          }
+        }
+
+        if (!rawDesc) {
+          rawDesc = cleanCells.join(' | ');
         }
       }
-
-      let col1 = parts[0].trim();
-      let col2 = parts.slice(1).join(' ').trim();
-
-      // Detección automática en caso de inversión
-      let rawQtyStr = order === 'qty_prod' ? col1 : col2;
-      let rawDesc = order === 'qty_prod' ? col2 : col1;
-
-      // Si la cantidad asignada no es número pero la descripción sí contiene solo un número, invertir
-      const cleanQty1 = rawQtyStr.replace(/[^\d]/g, '');
-      const cleanQty2 = rawDesc.replace(/[^\d]/g, '');
-      if (!cleanQty1 && cleanQty2 && rawDesc.length <= 5) {
-        const temp = rawQtyStr;
-        rawQtyStr = rawDesc;
-        rawDesc = temp;
-      }
-
-      const qty = parseInt(rawQtyStr.replace(/[^\d]/g, ''), 10);
-
-      // Si no hay cantidad válida mayor a 0 o parece un encabezado, omitir
-      if (isNaN(qty) || qty <= 0) {
-        return;
-      }
-
-      // Buscar coincidencia en catálogo
-      const matchedProduct = this.findProductMatch(rawDesc);
 
       if (matchedProduct) {
         matchedCount++;
         parsedRows.push({
           lineIndex: index + 1,
           rawDesc,
-          qty,
+          qty: qty > 0 ? qty : 1,
           matched: true,
-          product: matchedProduct
+          product: matchedProduct,
+          manualSelectedId: null
         });
       } else {
         unmatchedCount++;
         parsedRows.push({
           lineIndex: index + 1,
           rawDesc,
-          qty,
+          qty: qty > 0 ? qty : 1,
           matched: false,
-          product: null
+          product: null,
+          manualSelectedId: null
         });
       }
     });
@@ -1216,12 +1501,11 @@ const App = {
 
   handleConfirmImportPaste() {
     if (!this.state.pastingToDay) return;
-    const text = this.pasteExcelTextarea.value;
-    const parseResult = this.parsePastedText(text);
-    const matchedRows = parseResult.rows.filter(r => r.matched && r.product);
+    const rows = this.state.currentParsedRows || [];
+    const matchedRows = rows.filter(r => r.matched && r.product);
 
     if (matchedRows.length === 0) {
-      alert('No se encontraron productos coincidentes con el catálogo para cargar.');
+      alert('No se encontraron productos seleccionados para cargar.');
       return;
     }
 
@@ -1422,7 +1706,9 @@ const App = {
   renderAdminProducts() {
     const query = (this.adminProductSearchInput.value || '').toLowerCase().trim();
     const products = window.appStore.getProducts();
-    const filtered = products.filter(p => p.name.toLowerCase().includes(query));
+    const filtered = products.filter(p => 
+      p.name.toLowerCase().includes(query) || (p.code && p.code.toLowerCase().includes(query))
+    );
 
     if (filtered.length === 0) {
       this.adminProductsTableBody.innerHTML = `
@@ -1447,10 +1733,14 @@ const App = {
         `;
       }).join('');
 
+      const codeBadge = p.code ? `<span style="display: inline-block; background-color: #f1f5f9; color: #475569; font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-right: 0.4rem;">#${p.code}</span>` : '';
+
       html += `
         <tr>
           <td>
-            <div class="prod-name-cell">${this.escapeHtml(p.name)}</div>
+            <div class="prod-name-cell">
+              ${codeBadge}${this.escapeHtml(p.name)}
+            </div>
           </td>
           <td>
             <div class="recipe-tags-list">
