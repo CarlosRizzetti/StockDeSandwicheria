@@ -267,9 +267,9 @@ const App = {
     // Botones de incremento en modal de stock
     this.modalAdjustStock.querySelectorAll('.quick-stock-add').forEach(btn => {
       btn.addEventListener('click', () => {
-        const delta = parseInt(btn.getAttribute('data-delta'), 10) || 0;
-        const current = parseInt(this.adjustStockNewVal.value, 10) || 0;
-        this.adjustStockNewVal.value = Math.max(0, current + delta);
+        const delta = parseFloat(btn.getAttribute('data-delta')) || 0;
+        const current = parseFloat(this.adjustStockNewVal.value) || 0;
+        this.adjustStockNewVal.value = this.formatBreadVal(Math.max(0, current + delta));
       });
     });
 
@@ -692,21 +692,21 @@ const App = {
                                 style="cursor: pointer;" 
                                 title="Clic para ver productos que consumen este pan"
                                 onclick="App.showBreakdownModal('${b.breadId}', '${day.key}', '${day.name}')">
-                            ${b.required}
+                            ${this.formatBreadVal(b.required)}
                             <small style="font-size: 0.7rem; margin-left: 2px;">ℹ</small>
                           </span>
                         </td>
                         <td style="text-align: center;">
-                          <span class="val-mini">${b.startStock}</span>
+                          <span class="val-mini">${this.formatBreadVal(b.startStock)}</span>
                         </td>
                         <td style="text-align: right;" class="stock-remaining-cell">
                           ${b.isShortage ? `
-                            <span class="badge-status badge-shortage" title="Faltan ${b.shortageAmount} panes para cubrir la producción">
-                              FALTAN ${b.shortageAmount}
+                            <span class="badge-status badge-shortage" title="Faltan ${this.formatBreadVal(b.shortageAmount)} panes para cubrir la producción">
+                              FALTAN ${this.formatBreadVal(b.shortageAmount)}
                             </span>
                           ` : `
                             <span class="badge-status badge-ok" title="Stock restante suficiente">
-                              ${b.remainingStock}
+                              ${this.formatBreadVal(b.remainingStock)}
                             </span>
                           `}
                         </td>
@@ -809,12 +809,12 @@ const App = {
     const report = window.stockCalculator.getDetailedStockReport();
 
     // Actualizar métricas KPI
-    this.metricTotalStock.textContent = report.summary.totalStock;
+    this.metricTotalStock.textContent = this.formatBreadVal(report.summary.totalStock);
     if (this.metricTotalWeek) {
-      this.metricTotalWeek.textContent = report.summary.totalWeek;
+      this.metricTotalWeek.textContent = this.formatBreadVal(report.summary.totalWeek);
     }
-    this.metricReqToday.textContent = report.summary.totalReqToday;
-    this.metricReqTomorrow.textContent = report.summary.totalReqTomorrow;
+    this.metricReqToday.textContent = this.formatBreadVal(report.summary.totalReqToday);
+    this.metricReqTomorrow.textContent = this.formatBreadVal(report.summary.totalReqTomorrow);
     this.metricShortagesCount.textContent = report.summary.shortagesCount;
 
     if (report.summary.shortagesCount > 0) {
@@ -864,7 +864,7 @@ const App = {
           </td>
           <td>
             <div class="inline-stock-edit">
-              <span class="val-badge">${item.stock}</span>
+              <span class="val-badge">${this.formatBreadVal(item.stock)}</span>
               <button class="btn-inline-edit btn-quick-edit-stock" data-bread-id="${item.breadId}" title="Editar stock">
                 ✎
               </button>
@@ -872,18 +872,18 @@ const App = {
           </td>
           <td>
             <span class="val-badge ${item.totalWeek > 0 ? 'req-highlight' : 'req-zero'}">
-              ${item.totalWeek}
+              ${this.formatBreadVal(item.totalWeek)}
             </span>
           </td>
           <td>
             <span class="val-badge" style="cursor: pointer;" title="Ver qué productos consumen este pan hoy" onclick="App.showBreakdownModal('${item.breadId}', '${todayKey}', 'Hoy')">
-              ${item.reqToday}
+              ${this.formatBreadVal(item.reqToday)}
               ${item.reqToday > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
             </span>
           </td>
           <td>
             <span class="val-badge" style="cursor: pointer;" title="Ver qué productos consumen este pan mañana" onclick="App.showBreakdownModal('${item.breadId}', '${tomorrowKey}', 'Mañana')">
-              ${item.reqTomorrow}
+              ${this.formatBreadVal(item.reqTomorrow)}
               ${item.reqTomorrow > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
             </span>
           </td>
@@ -895,14 +895,14 @@ const App = {
                   <line x1="12" y1="9" x2="12" y2="13"/>
                   <line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
-                FALTAN ${item.shortageAmount}
+                FALTAN ${this.formatBreadVal(item.shortageAmount)}
               </span>
             ` : `
               <span class="badge-status badge-ok">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                Sobra +${item.remainingStock}
+                Sobra +${this.formatBreadVal(item.remainingStock)}
               </span>
             `}
           </td>
@@ -1556,11 +1556,11 @@ const App = {
             <div>
               <strong>${this.escapeHtml(item.productName)}</strong>
               <div style="color: var(--text-muted); font-size: 0.78rem;">
-                ${item.productQty} unidades × ${item.breadsPerUnit} pan(es)
+                ${item.productQty} unidades × ${this.formatBreadVal(item.breadsPerUnit)} pan(es)
               </div>
             </div>
             <div style="font-weight: 700; color: var(--primary-text); font-size: 0.95rem;">
-              ${item.breadsNeeded} panes
+              ${this.formatBreadVal(item.breadsNeeded)} panes
             </div>
           </div>
         `;
@@ -1568,7 +1568,7 @@ const App = {
       html += `
         <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid var(--border-color); font-weight: 800;">
           <span>TOTAL REQUERIDO:</span>
-          <span style="color: var(--text-main); font-size: 1.05rem;">${breadReq.requiredQty} panes</span>
+          <span style="color: var(--text-main); font-size: 1.05rem;">${this.formatBreadVal(breadReq.requiredQty)} panes</span>
         </div>
       `;
       this.modalBreakdownList.innerHTML = html;
@@ -1592,7 +1592,7 @@ const App = {
       return;
     }
 
-    let summaryText = itemsToDeduct.map(r => `• ${r.name}: ${r.requiredQty} unidades`).join('\n');
+    let summaryText = itemsToDeduct.map(r => `• ${r.name}: ${this.formatBreadVal(r.requiredQty)} unidades`).join('\n');
 
     const confirmed = confirm(
       `¿Deseas descontar el consumo de hoy (${todayInfo.name}) de tu inventario real?\n\n` +
@@ -1626,15 +1626,15 @@ const App = {
           <td>
             <strong>${this.escapeHtml(item.name)}</strong>
           </td>
-          <td>${item.currentStock}</td>
-          <td style="font-weight: 700;">${item.totalWeeklyRequired}</td>
+          <td>${this.formatBreadVal(item.currentStock)}</td>
+          <td style="font-weight: 700;">${this.formatBreadVal(item.totalWeeklyRequired)}</td>
           <td style="color: ${item.balance < 0 ? 'var(--danger)' : 'var(--success-text)'}; font-weight: 700;">
-            ${item.balance > 0 ? '+' : ''}${item.balance}
+            ${item.balance > 0 ? '+' : ''}${this.formatBreadVal(item.balance)}
           </td>
           <td>
             ${isDeficit ? `
               <span class="badge-tag badge-today" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
-                Pedir ${item.toPurchase} un.
+                Pedir ${this.formatBreadVal(item.toPurchase)} un.
               </span>
             ` : `
               <span class="badge-tag" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 0.8rem;">
@@ -1680,22 +1680,23 @@ const App = {
     const breadId = this.adjustStockBreadSelect.value;
     const bread = window.appStore.getBreadById(breadId);
     if (bread) {
-      this.adjustStockCurrentVal.value = `${bread.stock} unidades`;
-      this.adjustStockNewVal.value = bread.stock;
+      this.adjustStockCurrentVal.value = `${this.formatBreadVal(bread.stock)} unidades`;
+      this.adjustStockNewVal.value = this.formatBreadVal(bread.stock);
     }
   },
 
   handleSaveAdjustStock(e) {
     e.preventDefault();
     const breadId = this.adjustStockBreadSelect.value;
-    const newStock = parseInt(this.adjustStockNewVal.value, 10);
+    const newStock = parseFloat(this.adjustStockNewVal.value);
 
     if (isNaN(newStock) || newStock < 0) {
-      alert('El stock debe ser un número entero mayor o igual a 0.');
+      alert('El stock debe ser un número mayor o igual a 0.');
       return;
     }
 
-    window.appStore.updateBreadStock(breadId, newStock);
+    const roundedStock = Math.round((newStock + Number.EPSILON) * 100) / 100;
+    window.appStore.updateBreadStock(breadId, roundedStock);
     this.showToast('Stock actualizado con éxito.');
     this.closeModal(this.modalAdjustStock);
   },
@@ -1728,7 +1729,7 @@ const App = {
         const breadName = bread ? bread.name : 'Pan eliminado';
         return `
           <span class="recipe-tag">
-            <strong>${r.qty}x</strong> ${this.escapeHtml(breadName)}
+            <strong>${this.formatBreadVal(r.qty)}x</strong> ${this.escapeHtml(breadName)}
           </span>
         `;
       }).join('');
@@ -1835,7 +1836,7 @@ const App = {
       <select class="form-control recipe-bread-select">
         ${optionsHtml}
       </select>
-      <input type="number" min="1" step="1" value="${qty || 1}" class="form-control recipe-qty-input" placeholder="Cant.">
+      <input type="number" min="0.01" step="any" value="${qty || 1}" class="form-control recipe-qty-input" placeholder="Cant.">
       <button type="button" class="btn-icon-only danger btn-remove-recipe-row" title="Quitar">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -1871,7 +1872,7 @@ const App = {
 
     rows.forEach(row => {
       const breadId = row.querySelector('.recipe-bread-select').value;
-      const qty = parseInt(row.querySelector('.recipe-qty-input').value, 10);
+      const qty = Math.round((parseFloat(row.querySelector('.recipe-qty-input').value) + Number.EPSILON) * 100) / 100;
       if (breadId && qty > 0) {
         recipe.push({ breadId, qty });
       }
@@ -1929,7 +1930,7 @@ const App = {
             </div>
           </td>
           <td>
-            <span class="val-badge">${b.stock} un.</span>
+            <span class="val-badge">${this.formatBreadVal(b.stock)} un.</span>
           </td>
           <td style="font-size: 0.8rem; color: var(--text-muted);">
             ${usedText}
@@ -2002,7 +2003,7 @@ const App = {
       this.modalBreadFormTitle.textContent = 'Modificar Tipo de Pan';
       this.breadFormId.value = bread.id;
       this.breadFormName.value = bread.name;
-      this.breadFormStock.value = bread.stock;
+      this.breadFormStock.value = this.formatBreadVal(bread.stock);
     } else {
       this.modalBreadFormTitle.textContent = 'Nuevo Tipo de Pan';
       this.breadFormId.value = '';
@@ -2018,7 +2019,7 @@ const App = {
     e.preventDefault();
     const id = this.breadFormId.value;
     const name = this.breadFormName.value.trim();
-    const stock = parseInt(this.breadFormStock.value, 10) || 0;
+    const stock = Math.round((parseFloat(this.breadFormStock.value) + Number.EPSILON) * 100) / 100 || 0;
 
     if (!name) {
       alert('Por favor ingresa el nombre del pan.');
@@ -2149,6 +2150,14 @@ const App = {
       toast.style.transition = 'all 0.25s ease';
       setTimeout(() => toast.remove(), 250);
     }, 3200);
+  },
+
+  // Formatea cantidades de pan con un máximo de 2 decimales
+  formatBreadVal(val) {
+    if (val === null || val === undefined || isNaN(val)) return '0';
+    const num = Number(val);
+    const rounded = Math.round((num + Number.EPSILON) * 100) / 100;
+    return rounded.toString();
   },
 
   escapeHtml(str) {

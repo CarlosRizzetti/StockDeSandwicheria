@@ -1,4 +1,4 @@
-﻿/**
+/**
  * store.js - Gestion de estado y persistencia en LocalStorage
  * Aplicacion de Control de Stock de Panes - Sandwicheria & Gastro
  */
@@ -1377,6 +1377,13 @@ class Store {
       if (!parsed.breadTypes || !parsed.products || !parsed.weeklyPlan || parsed.products.length < 100) {
         throw new Error('Formato invalido');
       }
+      if (Array.isArray(parsed.breadTypes)) {
+        parsed.breadTypes.forEach(b => {
+          if (typeof b.stock === 'number') {
+            b.stock = this.roundBreadVal(b.stock);
+          }
+        });
+      }
       return parsed;
     } catch (e) {
       console.warn('Error leyendo localStorage, restableciendo a catalogo oficial:', e);
@@ -1483,6 +1490,11 @@ class Store {
     return this.data.breadTypes.find(b => b.id === id) || null;
   }
 
+  roundBreadVal(val) {
+    if (val === null || val === undefined || isNaN(val)) return 0;
+    return Math.round((parseFloat(val) + Number.EPSILON) * 100) / 100;
+  }
+
   addBreadType(name, initialStock = 0) {
     const cleanName = (name || '').trim();
     if (!cleanName) throw new Error('El nombre del pan no puede estar vacio.');
@@ -1494,7 +1506,7 @@ class Store {
     const newBread = {
       id: this.generateId('b'),
       name: cleanName,
-      stock: Math.max(0, parseInt(initialStock, 10) || 0)
+      stock: Math.max(0, this.roundBreadVal(initialStock))
     };
 
     this.data.breadTypes.push(newBread);
@@ -1515,7 +1527,7 @@ class Store {
     }
 
     if (stock !== null && stock !== undefined) {
-      bread.stock = Math.max(0, parseInt(stock, 10) || 0);
+      bread.stock = Math.max(0, this.roundBreadVal(stock));
     }
 
     this.save();
@@ -1525,7 +1537,7 @@ class Store {
   updateBreadStock(id, newStock) {
     const bread = this.getBreadById(id);
     if (!bread) throw new Error('Tipo de pan no encontrado.');
-    bread.stock = Math.max(0, parseInt(newStock, 10) || 0);
+    bread.stock = Math.max(0, this.roundBreadVal(newStock));
     this.save();
     return bread;
   }
@@ -1615,7 +1627,7 @@ class Store {
     const valid = [];
     recipe.forEach(item => {
       const breadId = item.breadId;
-      const qty = parseInt(item.qty, 10) || 0;
+      const qty = this.roundBreadVal(item.qty);
       if (breadId && qty > 0) {
         if (this.data.breadTypes.some(b => b.id === breadId)) {
           valid.push({ breadId, qty });
@@ -1735,7 +1747,7 @@ class Store {
     dayRequirements.forEach(req => {
       const bread = this.getBreadById(req.breadId);
       if (bread) {
-        bread.stock = Math.max(0, bread.stock - req.required);
+        bread.stock = Math.max(0, this.roundBreadVal(bread.stock - req.required));
       }
     });
     this.save();

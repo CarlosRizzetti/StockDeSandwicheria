@@ -18,6 +18,12 @@ class StockCalculator {
     this.store = store;
   }
 
+  // Redondea cantidades de pan a un máximo de 2 decimales (especialmente para pan de miga)
+  roundQty(val) {
+    if (val === null || val === undefined || isNaN(val)) return 0;
+    return Math.round((Number(val) + Number.EPSILON) * 100) / 100;
+  }
+
   // Obtener la clave del día de la semana actual según la fecha del sistema
   getTodayKey() {
     const dayIndex = new Date().getDay(); // 0 = Domingo, 1 = Lunes, ... 6 = Sábado
@@ -81,13 +87,13 @@ class StockCalculator {
         const totalNeededForThisProd = productQty * breadsPerUnit;
 
         if (requirements[breadId]) {
-          requirements[breadId].requiredQty += totalNeededForThisProd;
+          requirements[breadId].requiredQty = this.roundQty(requirements[breadId].requiredQty + totalNeededForThisProd);
           requirements[breadId].breakdown.push({
             productId: product.id,
             productName: product.name,
             productQty: productQty,
-            breadsPerUnit: breadsPerUnit,
-            breadsNeeded: totalNeededForThisProd
+            breadsPerUnit: this.roundQty(breadsPerUnit),
+            breadsNeeded: this.roundQty(totalNeededForThisProd)
           });
         }
       });
@@ -107,7 +113,7 @@ class StockCalculator {
     // Inicializar inventario corriendo con el stock físico disponible
     const runningStock = {};
     breadTypes.forEach(b => {
-      runningStock[b.id] = b.stock;
+      runningStock[b.id] = this.roundQty(b.stock);
     });
 
     DAYS_CONFIG.forEach(d => {
@@ -117,12 +123,12 @@ class StockCalculator {
       let dayShortages = 0;
 
       breadTypes.forEach(b => {
-        const req = dayReqs[b.id]?.requiredQty || 0;
-        const startStock = runningStock[b.id];
-        const remaining = startStock - req;
+        const req = this.roundQty(dayReqs[b.id]?.requiredQty || 0);
+        const startStock = this.roundQty(runningStock[b.id]);
+        const remaining = this.roundQty(startStock - req);
         const isShortage = remaining < 0;
 
-        totalBreadsNeeded += req;
+        totalBreadsNeeded = this.roundQty(totalBreadsNeeded + req);
         if (isShortage && req > 0) dayShortages++;
 
         dayBreads.push({
@@ -132,7 +138,7 @@ class StockCalculator {
           required: req,
           remainingStock: remaining,
           isShortage: isShortage,
-          shortageAmount: isShortage ? Math.abs(remaining) : 0,
+          shortageAmount: isShortage ? this.roundQty(Math.abs(remaining)) : 0,
           breakdown: dayReqs[b.id]?.breakdown || []
         });
 
@@ -169,33 +175,33 @@ class StockCalculator {
     const breadTypes = this.store.getBreadTypes();
 
     const report = breadTypes.map(bread => {
-      const reqToday = todayReqs[bread.id]?.requiredQty || 0;
-      const reqTomorrow = tomorrowReqs[bread.id]?.requiredQty || 0;
+      const reqToday = this.roundQty(todayReqs[bread.id]?.requiredQty || 0);
+      const reqTomorrow = this.roundQty(tomorrowReqs[bread.id]?.requiredQty || 0);
       const weeklyItem = weeklySummary.find(w => w.breadId === bread.id);
-      const totalWeek = weeklyItem ? weeklyItem.totalWeeklyRequired : 0;
-      const finalRemaining = bread.stock - totalWeek;
+      const totalWeek = weeklyItem ? this.roundQty(weeklyItem.totalWeeklyRequired) : 0;
+      const finalRemaining = this.roundQty(bread.stock - totalWeek);
       const isShortage = finalRemaining < 0;
 
       return {
         breadId: bread.id,
         name: bread.name,
-        stock: bread.stock,
+        stock: this.roundQty(bread.stock),
         reqToday,
         reqTomorrow,
         totalWeek,
         remainingStock: finalRemaining,
         isShortage: isShortage,
-        shortageAmount: isShortage ? Math.abs(finalRemaining) : 0,
+        shortageAmount: isShortage ? this.roundQty(Math.abs(finalRemaining)) : 0,
         breakdownToday: todayReqs[bread.id]?.breakdown || [],
         breakdownTomorrow: tomorrowReqs[bread.id]?.breakdown || []
       };
     });
 
     // Métricas globales
-    const totalStock = report.reduce((acc, r) => acc + r.stock, 0);
-    const totalWeek = report.reduce((acc, r) => acc + r.totalWeek, 0);
-    const totalReqToday = report.reduce((acc, r) => acc + r.reqToday, 0);
-    const totalReqTomorrow = report.reduce((acc, r) => acc + r.reqTomorrow, 0);
+    const totalStock = this.roundQty(report.reduce((acc, r) => acc + r.stock, 0));
+    const totalWeek = this.roundQty(report.reduce((acc, r) => acc + r.totalWeek, 0));
+    const totalReqToday = this.roundQty(report.reduce((acc, r) => acc + r.reqToday, 0));
+    const totalReqTomorrow = this.roundQty(report.reduce((acc, r) => acc + r.reqTomorrow, 0));
     const shortagesCount = report.filter(r => r.isShortage).length;
 
     return {
@@ -223,7 +229,7 @@ class StockCalculator {
       result[b.id] = {
         breadId: b.id,
         name: b.name,
-        currentStock: b.stock,
+        currentStock: this.roundQty(b.stock),
         totalWeeklyRequired: 0,
         byDay: {}
       };
@@ -232,16 +238,18 @@ class StockCalculator {
     DAYS_CONFIG.forEach(d => {
       const dayReqs = this.calculateDayRequirements(d.key);
       breadTypes.forEach(b => {
-        const qty = dayReqs[b.id]?.requiredQty || 0;
+        const qty = this.roundQty(dayReqs[b.id]?.requiredQty || 0);
         result[b.id].byDay[d.key] = qty;
-        result[b.id].totalWeeklyRequired += qty;
+        result[b.id].totalWeeklyRequired = this.roundQty(result[b.id].totalWeeklyRequired + qty);
       });
     });
 
     return Object.values(result).map(item => ({
       ...item,
-      balance: item.currentStock - item.totalWeeklyRequired,
-      toPurchase: Math.max(0, item.totalWeeklyRequired - item.currentStock)
+      currentStock: this.roundQty(item.currentStock),
+      totalWeeklyRequired: this.roundQty(item.totalWeeklyRequired),
+      balance: this.roundQty(item.currentStock - item.totalWeeklyRequired),
+      toPurchase: this.roundQty(Math.max(0, item.totalWeeklyRequired - item.currentStock))
     }));
   }
 
@@ -257,7 +265,8 @@ class StockCalculator {
       .map(r => {
         const bread = this.store.getBreadById(r.breadId);
         const name = bread ? bread.name : 'Pan desconocido';
-        return `${r.qty}x ${name}`;
+        const formattedQty = this.roundQty(r.qty);
+        return `${formattedQty}x ${name}`;
       })
       .join(', ');
   }
