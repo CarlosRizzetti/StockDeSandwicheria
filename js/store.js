@@ -1316,7 +1316,7 @@ const INITIAL_DATA = {
         "recipe":  [
                        {
                            "breadId":  "b_miga",
-                           "qty":  1
+                           "qty":  0.018
                        }
                    ]
     }
