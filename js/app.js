@@ -598,11 +598,11 @@ const App = {
                     </div>
                   </div>
                 ` : `
-                  <table class="clean-table">
+                  <table class="clean-table day-products-table">
                     <thead>
                       <tr>
                         <th>Producto</th>
-                        <th style="width: 150px;">Cantidad</th>
+                        <th class="col-qty" style="width: 150px;">Cantidad</th>
                         <th style="text-align: right; width: 60px;">Acción</th>
                       </tr>
                     </thead>
@@ -871,11 +871,6 @@ const App = {
             </div>
           </td>
           <td>
-            <span class="val-badge ${item.totalWeek > 0 ? 'req-highlight' : 'req-zero'}">
-              ${this.formatBreadVal(item.totalWeek)}
-            </span>
-          </td>
-          <td>
             <span class="val-badge" style="cursor: pointer;" title="Ver qué productos consumen este pan hoy" onclick="App.showBreakdownModal('${item.breadId}', '${todayKey}', 'Hoy')">
               ${this.formatBreadVal(item.reqToday)}
               ${item.reqToday > 0 ? '<small style="color: var(--secondary); font-size: 0.75rem; margin-left: 2px;">ℹ</small>' : ''}
@@ -905,6 +900,11 @@ const App = {
                 Sobra +${this.formatBreadVal(item.remainingStock)}
               </span>
             `}
+          </td>
+          <td>
+            <span class="val-badge ${item.totalWeek > 0 ? 'req-highlight' : 'req-zero'}">
+              ${this.formatBreadVal(item.totalWeek)}
+            </span>
           </td>
         </tr>
       `;

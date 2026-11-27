@@ -1759,9 +1759,35 @@ body {
   }
 
   /* Ocultar columna de Acción en la tabla de productos del día */
-  .day-card .clean-table th:last-child,
-  .day-card .clean-table td:last-child {
+  .day-products-table th:last-child,
+  .day-products-table td:last-child {
     display: none !important;
+  }
+
+  /* Columna de Cantidad angosta en la hoja impresa */
+  .day-products-table th.col-qty,
+  .day-products-table td:nth-child(2) {
+    width: 55px !important;
+    max-width: 55px !important;
+    text-align: center !important;
+    padding: 6px 4px !important;
+    white-space: nowrap !important;
+  }
+
+  .day-products-table .qty-stepper {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .day-products-table .qty-stepper .qty-input {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  /* Asegurar que la columna Stock Restante se imprima */
+  .day-stock-table th:last-child,
+  .day-stock-table td:last-child {
+    display: table-cell !important;
   }
 
   /* Limpieza de cantidad para impresión */
