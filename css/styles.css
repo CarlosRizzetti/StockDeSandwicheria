@@ -1767,10 +1767,11 @@ body {
   /* Columna de Cantidad angosta en la hoja impresa */
   .day-products-table th.col-qty,
   .day-products-table td:nth-child(2) {
-    width: 55px !important;
-    max-width: 55px !important;
+    width: 85px !important;
+    min-width: 85px !important;
+    max-width: 85px !important;
     text-align: center !important;
-    padding: 6px 4px !important;
+    padding: 6px 6px !important;
     white-space: nowrap !important;
   }
 
